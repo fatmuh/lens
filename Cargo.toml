@@ -1,0 +1,69 @@
+[package]
+name = "lens"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+description = "Lightweight code quality scanner — issues, duplication, coverage"
+license = "MIT"
+repository = "https://github.com/fatmuh/lens"
+readme = "README.md"
+keywords = ["static-analysis", "code-quality", "linter", "coverage", "duplication"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "lens"
+path = "src/main.rs"
+
+[dependencies]
+# CLI
+clap = { version = "4.5", features = ["derive", "wrap_help"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Errors
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# File walking
+ignore = "0.4"
+walkdir = "2.5"
+
+# Output
+indicatif = { version = "0.17", features = ["improved_unicode"] }
+comfy-table = "7"
+owo-colors = { version = "4", features = ["supports-colors"] }
+
+# Parallelism
+rayon = "1.10"
+num_cpus = "1.16"
+
+# Text
+regex = "1.10"
+once_cell = "1.19"
+globset = "0.4"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Parsing
+tree-sitter = "0.25"
+tree-sitter-typescript = "0.23"
+quick-xml = "0.36"
+
+[dev-dependencies]
+tempfile = "3.10"
+assert_cmd = "2.0"
+predicates = "3.1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true

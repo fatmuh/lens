@@ -1,0 +1,28 @@
+# Rust
+/target/
+# Cargo.lock is NOT ignored — we commit it for reproducible binary builds.
+# **/*.rs.bk
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Lens output
+lens-report/
+*.lens.json
+# Generated install scripts (uncomment to commit if you fork them)
+# install.sh
+# install.ps1
+
+# Coverage
+/coverage/
+*.lcov
+cobertura-coverage.xml
+jacoco.xml

@@ -1,0 +1,125 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual release'
+        required: true
+        default: 'manual'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux (glibc, dynamically linked, smallest)
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            binary: lens
+            archive: tar.gz
+          # Linux (musl, fully static — works on any distro)
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            binary: lens
+            archive: tar.gz
+          # macOS (Intel)
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            binary: lens
+            archive: tar.gz
+          # macOS (Apple Silicon)
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            binary: lens
+            archive: tar.gz
+          # Windows (x64)
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            binary: lens.exe
+            archive: zip
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install musl tools
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('Cargo.lock') }}
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }} --locked
+
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          cd target/${{ matrix.target }}/release
+          if [ "${{ matrix.archive }}" = "tar.gz" ]; then
+            tar czf ../../../dist/lens-${{ matrix.target }}.tar.gz ${{ matrix.binary }}
+          else
+            # Windows: zip is built-in on windows-latest via 7z/PowerShell
+            powershell -Command "Compress-Archive -Path '${{ matrix.binary }}' -DestinationPath '../../../dist/lens-${{ matrix.target }}.zip' -Force"
+          fi
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          cd dist
+          sha256sum * > checksums.txt
+          cat checksums.txt
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lens-${{ matrix.target }}
+          path: |
+            dist/lens-${{ matrix.target }}.${{ matrix.archive }}
+            dist/checksums.txt
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: 'Lens ${{ github.ref_name }}'
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            artifacts/**/lens-*.tar.gz
+            artifacts/**/lens-*.zip
+            artifacts/**/checksums.txt

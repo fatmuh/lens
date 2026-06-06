@@ -1,0 +1,116 @@
+# Lens quality gate configuration
+# Copy this file to `quality-gate.toml` and customize.
+# Docs: https://github.com/fatmuh/lens
+
+[scan]
+# Working directory for the scan (relative paths in reports)
+root = "."
+
+# Glob patterns to EXCLUDE from scanning.
+# Matched against the path relative to `root`.
+exclude = [
+  "**/node_modules/**",
+  "**/target/**",
+  "**/dist/**",
+  "**/build/**",
+  "**/.git/**",
+  "**/.next/**",
+  "**/vendor/**",
+  "**/__pycache__/**",
+  "**/.venv/**",
+  "**/venv/**",
+  "**/*.min.js",
+  "**/*.min.css",
+  "**/*.lock",
+  "**/lens-report/**",
+  "**/coverage/**",
+]
+
+# Optional WHITELIST. If non-empty, only files matching at least one
+# pattern will be scanned (in addition to not matching any `exclude`).
+include = []
+
+# Maximum file size in bytes. Files larger than this are skipped
+# from analysis (still discovered/counted).
+max_file_size_bytes = 1048576  # 1 MiB
+
+# Number of parallel analysis jobs. 0 = auto-detect (num CPUs).
+parallel_jobs = 0
+
+# Respect `.gitignore` files in the project.
+respect_gitignore = true
+
+# Respect `.lensignore` files (lens-specific ignore).
+respect_lensignore = true
+
+# Extra ignore file path (defaults to `.lensignore` at root).
+ignore_file = ".lensignore"
+
+[nosonar]
+# Honor `// NOSONAR`, `# NOSONAR`, etc. comments to suppress issues.
+enabled = true
+# Additional custom markers (besides the built-in `NOSONAR`).
+custom_markers = []
+
+[duplication]
+# Minimum token block size to consider a duplicate (Sonar default: 100).
+min_tokens = 100
+# Fail the quality gate if duplication exceeds this percentage.
+fail_above_percent = 3.0
+
+[coverage]
+# Glob patterns pointing to coverage report files.
+report_paths = [
+  "coverage/lcov.info",
+  "**/cobertura-coverage.xml",
+  "**/jacoco.xml",
+  "**/coverage.xml",
+]
+# Fail the quality gate if coverage is below this percent.
+fail_below_percent = 80.0
+# Glob patterns of source files to EXCLUDE from coverage calculations.
+exclude = [
+  "**/test/**",
+  "**/*_test.go",
+  "**/*Test.java",
+  "**/*.spec.ts",
+  "**/*.test.ts",
+  "**/*.spec.js",
+  "**/*.test.js",
+  "**/tests/**",
+]
+
+[issues]
+# Severities that cause the quality gate to fail.
+fail_on = ["blocker", "critical"]
+# Maximum allowed issues per severity in a single scan.
+# Use -1 to disable the cap for that severity.
+max_blocker = 0
+max_critical = 0
+max_major = -1
+max_minor = -1
+max_info = -1
+
+[rules]
+# Disable specific rules by ID. Example: "rust:unused_imports"
+disabled = []
+
+[output]
+# Default format: "terminal" | "json" | "sarif" | "html"
+format = "terminal"
+# Exit code when the quality gate fails.
+gate_fail_exit_code = 1
+# Color output: "auto" | "always" | "never"
+color = "auto"
+# Include source code snippets in reports.
+show_source = true
+
+[html]
+# Output directory for HTML reports.
+output = "lens-report"
+# Open the report in your default browser after the scan.
+open_browser = false
+
+[watch]
+# Debounce duration in milliseconds for watch mode.
+debounce_ms = 200

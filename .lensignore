@@ -1,0 +1,22 @@
+# Lens-specific ignore patterns (similar syntax to .gitignore).
+# These are merged with patterns from `[scan] exclude` in quality-gate.toml.
+
+# Generated files
+**/generated/**
+**/*.gen.ts
+**/*.gen.go
+**/*.pb.go
+**/*.g.dart
+
+# Vendored dependencies (fallback if not in quality-gate.toml)
+**/vendor/**
+
+# Big data / fixtures
+**/fixtures/**
+**/__snapshots__/**
+
+# Documentation
+**/docs/**
+
+# Scripts
+**/scripts/**

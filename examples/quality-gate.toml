@@ -1,0 +1,119 @@
+# Example quality-gate.toml for a typical NestJS / Express / TypeScript project.
+#
+# Copy this to your project root, rename to `quality-gate.toml`, and tweak.
+# Lens will pick it up automatically from the scan root.
+
+[scan]
+# Working directory for the scan (used for resolving relative paths in reports).
+root = "."
+
+# Glob patterns to exclude from scanning entirely.
+# These are merged with .gitignore and .lensignore (both auto-detected).
+exclude = [
+  "**/node_modules/**",
+  "**/dist/**",
+  "**/build/**",
+  "**/coverage/**",
+  "**/.next/**",
+  "**/*.min.js",
+  "**/*.min.css",
+  "**/*.d.ts",
+  "**/*.config.{js,ts,mjs,cjs}",
+  "**/lens-report/**",
+]
+
+# Optional WHITELIST. If non-empty, only matching files are scanned
+# (in addition to not matching any `exclude`).
+include = ["src/**"]
+
+# Maximum file size in bytes. Files larger than this are skipped
+# from analysis (still discovered and counted).
+max_file_size_bytes = 1048576   # 1 MiB
+
+# Number of parallel analysis jobs. 0 = auto-detect (num CPUs).
+parallel_jobs = 0
+
+# Respect .gitignore and .lensignore (both default to true).
+respect_gitignore = true
+respect_lensignore = true
+ignore_file = ".lensignore"
+
+[nosonar]
+# Honor `// NOSONAR`, `# NOSONAR`, etc. comments to suppress issues.
+enabled = true
+# Additional custom markers (besides the built-in `NOSONAR`).
+custom_markers = []
+
+[duplication]
+# Minimum block size (in tokens) to consider a duplicate.
+# SonarQube's default is 100; lower = more sensitive but more false positives.
+min_tokens = 100
+# Fail the quality gate if duplication exceeds this percentage.
+fail_above_percent = 3.0
+
+[coverage]
+# Glob patterns pointing to coverage report files.
+# Lens auto-detects the format: LCOV (.info), Cobertura XML, or JaCoCo XML.
+report_paths = [
+  "coverage/lcov.info",
+  "**/cobertura-coverage.xml",
+  "**/jacoco.xml",
+]
+
+# Fail the quality gate if coverage is below this percentage.
+fail_below_percent = 80.0
+
+# Glob patterns of source files to EXCLUDE from coverage calculations.
+# Test files are excluded by default.
+exclude = [
+  "**/*.spec.ts",
+  "**/*.spec.tsx",
+  "**/*.test.ts",
+  "**/*.test.tsx",
+  "**/test/**",
+  "**/tests/**",
+  "**/__tests__/**",
+  "**/__mocks__/**",
+]
+
+[issues]
+# Severities that cause the quality gate to fail. (Phase 2)
+fail_on = ["blocker", "critical"]
+
+# Maximum allowed issues per severity in a single scan.
+# Use -1 to disable the cap for that severity.
+max_blocker = 0
+max_critical = 0
+max_major = -1
+max_minor = -1
+max_info = -1
+
+[rules]
+# Disable specific rules by ID.
+# Format: "<language>:<rule-name>". Example: "typescript:no-explicit-any"
+disabled = []
+
+[output]
+# Default format: "terminal" | "json" | "html" | "sarif"
+format = "terminal"
+
+# Exit code when the quality gate fails.
+gate_fail_exit_code = 1
+
+# Color output: "auto" | "always" | "never"
+# `auto` respects the NO_COLOR environment variable and TTY detection.
+color = "auto"
+
+# Include source code snippets in reports.
+show_source = true
+
+[html]
+# Output directory for HTML reports.
+output = "lens-report"
+
+# Open the report in your default browser after the scan.
+open_browser = false
+
+[watch]
+# Debounce duration in milliseconds for watch mode. (Phase 6)
+debounce_ms = 200
