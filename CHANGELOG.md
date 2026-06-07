@@ -5,6 +5,56 @@ All notable changes to Lens will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.3.0] — 2026-06-07
+
+### Added
+- **Per-rule configuration** — configurable thresholds in `quality-gate.toml`
+  - `max_function_lines` (default 50)
+  - `max_function_complexity` (default 15)
+  - `max_params` (default 5)
+  - `no_magic_numbers_min` (default 3)
+  - `disabled` array to turn off specific rules
+
+- **Incremental scanning** — skip files unchanged since last scan
+  - Uses `.lens/state.json` file hashes
+  - `⚡ scanned 5 of 4854 files (4849 skipped, hash match)`
+  - Massive speedup for repeated scans on large codebases
+
+- **Significant code filtering** — separate production vs test/generated issues
+  - Default excludes: `*.test.ts`, `*.spec.ts`, `__tests__/`, `*.d.ts`, `dist/`, `build/`
+  - `10,307 in significant code, 9,718 in test/generated (excluded from gate)`
+  - Quality gate uses significant code only
+
+- **AI-powered auto-fix agent** (`lens fix`, `lens watch`)
+  - OpenAI-compatible BYOK — works with OpenAI, Ollama, Groq, OpenRouter, Together, any compatible API
+  - Coverage agent: reads LCOV, generates Jest tests for uncovered lines
+  - Dedup agent: finds duplicate blocks, refactors into shared utilities
+  - Constraint: never changes existing application behavior
+
+- **Interactive AI setup** (`lens setup`)
+  - Prompts for API base URL (shows examples)
+  - API key input (optional for local models)
+  - Fetches models from `/models` endpoint
+  - Interactive model selection (numbered list or custom name)
+  - Saves to `~/.lens/config.toml`
+  - Masked API key display: `sk-t...7890`
+
+- **Test runner** (`lens test`)
+  - Auto-detects test framework (Jest, Vitest, Mocha)
+  - Finds config files (jest.config.ts, vitest.config.ts, etc.)
+  - Runs tests with coverage — streams output real-time
+  - Animated spinner while waiting for test output
+  - Parses coverage-summary.json for per-file results
+  - `lens test . --fix` feeds coverage gaps to AI agent
+  - `lens test . --detect-only` shows framework without running
+
+### Changed
+- `max-function-lines`, `max-function-complexity`, `max-params`, `no-magic-numbers` now read thresholds from config
+- Rules with configurable thresholds use `with_threshold()` constructor
+- `RuleRegistry::with_config()` builds rules with user settings
+
 ## [0.2.0] — 2026-06-07
 
 ### Added
@@ -283,7 +333,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (most-impacted first).
 - Coverage parsing is essentially free (file I/O + simple parsing).
 
-[Unreleased]: https://github.com/fatmuh/lens/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/fatmuh/lens/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/fatmuh/lens/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/fatmuh/lens/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/fatmuh/lens/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/fatmuh/lens/releases/tag/v0.1.0
