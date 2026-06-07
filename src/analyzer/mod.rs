@@ -9,6 +9,7 @@
 
 pub mod duplication;
 pub mod metrics;
+pub mod cognitive;
 pub mod parser;
 pub mod tokenize;
 

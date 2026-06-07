@@ -14,6 +14,7 @@ mod coverage;
 mod report;
 mod rules;
 mod scanner;
+mod state;
 mod util;
 
 use cli::{Cli, Command};

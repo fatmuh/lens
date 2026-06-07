@@ -83,6 +83,15 @@ pub fn parse(content: &str) -> CoverageReport {
         coverage_percent: 0.0,
         file_count: 0,
         files,
+        ut_lines: 0,
+        ut_covered_lines: 0,
+        ut_coverage_percent: 0.0,
+        it_lines: 0,
+        it_covered_lines: 0,
+        it_coverage_percent: 0.0,
+        new_total_lines: 0,
+        new_covered_lines: 0,
+        new_coverage_percent: 0.0,
     };
     report.recompute_totals();
     report

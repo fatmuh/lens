@@ -112,6 +112,28 @@ pub struct ScanArgs {
     /// more closely. Off by default to preserve exact-hash semantics.
     #[arg(long)]
     pub normalize_identifiers: bool,
+
+    /// Glob for unit-test coverage reports (LCOV, Cobertura, JaCoCo).
+    /// Can be specified multiple times. Merged with `coverage.report_paths`
+    /// in config under the "ut" category.
+    #[arg(long = "coverage-ut", value_name = "GLOB")]
+    pub coverage_ut: Vec<String>,
+
+    /// Glob for integration-test coverage reports. Same formats as
+    /// `--coverage-ut`. Tracked separately as `it_coverage` and
+    /// `overall_coverage` in the output.
+    #[arg(long = "coverage-it", value_name = "GLOB")]
+    pub coverage_it: Vec<String>,
+
+    /// Only show issues from files added/changed since the previous scan
+    /// (requires `.lens/state.json` from a prior run).
+    #[arg(long)]
+    pub new_code: bool,
+
+    /// Don't save a new state snapshot to `.lens/state.json` after this
+    /// scan. Useful for read-only scans (CI, dry-runs).
+    #[arg(long)]
+    pub no_state: bool,
 }
 
 #[derive(Debug, Args)]

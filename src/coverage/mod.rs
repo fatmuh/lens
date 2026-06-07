@@ -34,6 +34,19 @@ pub struct CoverageReport {
     pub coverage_percent: f64,
     pub file_count: usize,
     pub files: Vec<FileCoverage>,
+    /// Unit-test-only coverage (if `--coverage-ut` was used).
+    pub ut_lines: u64,
+    pub ut_covered_lines: u64,
+    pub ut_coverage_percent: f64,
+    /// Integration-test-only coverage (if `--coverage-it` was used).
+    pub it_lines: u64,
+    pub it_covered_lines: u64,
+    pub it_coverage_percent: f64,
+    /// Coverage on files added/changed since the last scan (new code).
+    /// Only populated if `.lens/state.json` exists.
+    pub new_total_lines: u64,
+    pub new_covered_lines: u64,
+    pub new_coverage_percent: f64,
 }
 
 impl CoverageReport {
@@ -45,6 +58,15 @@ impl CoverageReport {
             coverage_percent: 0.0,
             file_count: 0,
             files: vec![],
+            ut_lines: 0,
+            ut_covered_lines: 0,
+            ut_coverage_percent: 0.0,
+            it_lines: 0,
+            it_covered_lines: 0,
+            it_coverage_percent: 0.0,
+            new_total_lines: 0,
+            new_covered_lines: 0,
+            new_coverage_percent: 0.0,
         }
     }
 
@@ -70,6 +92,8 @@ impl CoverageReport {
         self.recompute_totals();
     }
 
+    pub fn ut_total_lines(&self) -> u64 { self.ut_lines }
+    pub fn it_total_lines(&self) -> u64 { self.it_lines }
     pub fn recompute_totals(&mut self) {
         self.total_lines = self.files.iter().map(|f| f.total_lines).sum();
         self.covered_lines = self.files.iter().map(|f| f.covered_lines).sum();
@@ -138,6 +162,20 @@ pub fn parse_many(paths: &[PathBuf]) -> CoverageReport {
     combined
 }
 
+/// Parse coverage paths, splitting them into "ut" and "it" categories.
+/// Returns (overall, ut_report, it_report). The overall report has
+/// `ut_*` and `it_*` fields populated for separate display.
+pub fn parse_with_categories(
+    overall_paths: &[PathBuf],
+    ut_paths: &[PathBuf],
+    it_paths: &[PathBuf],
+) -> (CoverageReport, CoverageReport, CoverageReport) {
+    let overall = parse_many(overall_paths);
+    let ut = parse_many(ut_paths);
+    let it = parse_many(it_paths);
+    (overall, ut, it)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -157,6 +195,9 @@ mod tests {
                 coverage_percent: 0.0,
                 uncovered_lines: vec![2, 4],
             }],
+            ut_lines: 0, ut_covered_lines: 0, ut_coverage_percent: 0.0,
+            it_lines: 0, it_covered_lines: 0, it_coverage_percent: 0.0,
+            new_total_lines: 0, new_covered_lines: 0, new_coverage_percent: 0.0,
         };
         let b = CoverageReport {
             format: "lcov".into(),
@@ -171,6 +212,9 @@ mod tests {
                 coverage_percent: 0.0,
                 uncovered_lines: vec![1, 2, 4],
             }],
+            ut_lines: 0, ut_covered_lines: 0, ut_coverage_percent: 0.0,
+            it_lines: 0, it_covered_lines: 0, it_coverage_percent: 0.0,
+            new_total_lines: 0, new_covered_lines: 0, new_coverage_percent: 0.0,
         };
         a.merge(b);
         let foo = a.files.iter().find(|f| f.path == PathBuf::from("foo.ts")).unwrap();

@@ -117,6 +117,13 @@ pub struct CoverageConfig {
     pub report_paths: Vec<String>,
     pub fail_below_percent: f64,
     pub exclude: Vec<String>,
+    /// Glob for unit-test coverage reports. If set, separate `ut_coverage`
+    /// is reported. (LCOV / Cobertura / JaCoCo.)
+    #[serde(default)]
+    pub ut_paths: Vec<String>,
+    /// Glob for integration-test coverage reports. Separate `it_coverage`.
+    #[serde(default)]
+    pub it_paths: Vec<String>,
 }
 
 impl Default for CoverageConfig {
@@ -125,6 +132,8 @@ impl Default for CoverageConfig {
             report_paths: vec!["coverage/lcov.info".into()],
             fail_below_percent: 80.0,
             exclude: Vec::new(),
+            ut_paths: Vec::new(),
+            it_paths: Vec::new(),
         }
     }
 }

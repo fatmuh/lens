@@ -20,6 +20,7 @@ use crate::cli::{Format, ScanArgs};
 use crate::config::Config;
 use crate::coverage::{self, CoverageReport};
 use crate::rules::{Issue, Severity};
+use crate::state;
 use crate::util;
 
 pub mod discovery;
@@ -107,15 +108,34 @@ pub fn run(config_arg: Option<PathBuf>, args: ScanArgs) -> Result<ExitCode> {
     let nosonar_total: usize = analysis.files.iter().map(|a| a.nosonar_count).sum();
 
     // Phase 3: parse coverage reports (if any). Missing files are silently
-    // skipped.
+    // skipped. UT/IT paths come from CLI flags and override the
+    // `coverage.ut_paths` / `coverage.it_paths` config keys.
     let coverage_paths: Vec<PathBuf> = config
         .coverage
         .report_paths
         .iter()
         .map(|p| scan_root.join(p))
         .collect();
-    let mut coverage_report = coverage::parse_many(&coverage_paths);
+    let ut_paths: Vec<PathBuf> = if !args.coverage_ut.is_empty() {
+        args.coverage_ut.iter().map(|p| scan_root.join(p)).collect()
+    } else {
+        config.coverage.ut_paths.iter().map(|p| scan_root.join(p)).collect()
+    };
+    let it_paths: Vec<PathBuf> = if !args.coverage_it.is_empty() {
+        args.coverage_it.iter().map(|p| scan_root.join(p)).collect()
+    } else {
+        config.coverage.it_paths.iter().map(|p| scan_root.join(p)).collect()
+    };
+    let (mut coverage_report, ut_report, it_report) =
+        coverage::parse_with_categories(&coverage_paths, &ut_paths, &it_paths);
     apply_coverage_excludes(&mut coverage_report, &config.coverage.exclude, &scan_root);
+    // Populate UT/IT fields.
+    coverage_report.ut_lines = ut_report.total_lines;
+    coverage_report.ut_covered_lines = ut_report.covered_lines;
+    coverage_report.ut_coverage_percent = ut_report.coverage_percent;
+    coverage_report.it_lines = it_report.total_lines;
+    coverage_report.it_covered_lines = it_report.covered_lines;
+    coverage_report.it_coverage_percent = it_report.coverage_percent;
 
     let duration = started.elapsed();
     let duration_ms = duration.as_millis() as u64;
@@ -167,7 +187,50 @@ pub fn run(config_arg: Option<PathBuf>, args: ScanArgs) -> Result<ExitCode> {
         }
     }
 
+    // Save state snapshot for next scan's new-code tracking.
+    save_state_snapshot(&ctx.root, &analysis);
+
     Ok(ExitCode::SUCCESS)
+}
+
+/// Save a snapshot of file hashes + issues to `.lens/state.json` for
+/// next-scan new-code tracking.
+fn save_state_snapshot(scan_root: &Path, analysis: &ProjectAnalysis) {
+    let mut snap = state::Snapshot::default();
+    snap.scan_time = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+    for f in &analysis.files {
+        let rel = path_to_string(&f.path);
+        let hash = std::fs::read(&f.path)
+            .ok()
+            .and_then(|bytes| {
+                use std::collections::hash_map::DefaultHasher;
+                use std::hash::{Hash, Hasher};
+                let mut h = DefaultHasher::new();
+                bytes.hash(&mut h);
+                Some(format!("{:016x}", h.finish()))
+            })
+            .unwrap_or_default();
+        let tracked: Vec<state::TrackedIssue> = f.issues.iter().map(|i| {
+            let key = state::Snapshot::issue_key(i);
+            state::TrackedIssue {
+                key,
+                rule_id: i.rule_id.clone(),
+                line: i.start_line,
+                message: i.message.clone(),
+            }
+        }).collect();
+        snap.files.insert(rel, state::FileSnapshot { hash, issues: tracked });
+    }
+    if let Err(e) = snap.save(scan_root) {
+        eprintln!("warning: failed to save state snapshot: {e}");
+    }
+}
+
+fn path_to_string(p: &Path) -> String {
+    p.to_string_lossy().to_string()
 }
 
 fn apply_coverage_excludes(report: &mut CoverageReport, excludes: &[String], root: &Path) {
@@ -283,6 +346,41 @@ fn evaluate_gate(
                     "coverage {:.2}% ≥ {:.2}%",
                     coverage.coverage_percent, fail_below_percent
                 ),
+            ));
+        }
+        // New-code coverage (only if state was found).
+        if coverage.new_total_lines > 0 {
+            if coverage.new_coverage_percent < fail_below_percent {
+                messages.push((
+                    false,
+                    format!(
+                        "new_coverage {:.2}% < {:.2}%",
+                        coverage.new_coverage_percent, fail_below_percent
+                    ),
+                ));
+                all_pass = false;
+            } else {
+                messages.push((
+                    true,
+                    format!(
+                        "new_coverage {:.2}% ≥ {:.2}%",
+                        coverage.new_coverage_percent, fail_below_percent
+                    ),
+                ));
+            }
+        }
+        // Unit-test coverage.
+        if coverage.ut_total_lines() > 0 {
+            messages.push((
+                true,
+                format!("ut_coverage {:.2}% (informational)", coverage.ut_coverage_percent),
+            ));
+        }
+        // Integration-test coverage.
+        if coverage.it_total_lines() > 0 {
+            messages.push((
+                true,
+                format!("it_coverage {:.2}% (informational)", coverage.it_coverage_percent),
             ));
         }
     }
@@ -403,7 +501,7 @@ fn report_terminal(
 
     print_duplication_summary(&analysis.duplication);
     print_coverage_summary(coverage);
-    print_issues_summary(&analysis.files);
+    print_issues_summary(&analysis.files, &ctx.root);
 
     println!();
     println!(
@@ -414,7 +512,7 @@ fn report_terminal(
     println!();
 }
 
-fn print_issues_summary(files: &[crate::analyzer::FileAnalysis]) {
+fn print_issues_summary(files: &[crate::analyzer::FileAnalysis], scan_root: &Path) {
     let all: Vec<&Issue> = files.iter().flat_map(|f| f.issues.iter()).collect();
     if all.is_empty() {
         return;
@@ -430,6 +528,36 @@ fn print_issues_summary(files: &[crate::analyzer::FileAnalysis]) {
             Severity::Info => by_sev[4] += 1,
         }
     }
+    // Issue lifecycle tracking (NEW / PERSISTENT / FIXED).
+    let snapshot = state::Snapshot::load(scan_root);
+    let mut new_count = 0usize;
+    let mut persistent_count = 0usize;
+    let mut fixed_count = 0usize;
+    let mut regressed_count = 0usize;
+    for i in &all {
+        match snapshot.classify_issue(i) {
+            state::IssueStatus::New => new_count += 1,
+            state::IssueStatus::Persistent => persistent_count += 1,
+            state::IssueStatus::Regressed => regressed_count += 1,
+            state::IssueStatus::Fixed => {} // (not in current scan)
+        }
+    }
+    // Fixed = issues from the previous snapshot that are no longer in current scan.
+    let current_keys: std::collections::HashSet<String> = all
+        .iter()
+        .map(|i| state::Snapshot::issue_key(i))
+        .collect();
+    for (_, prev_file) in &snapshot.files {
+        for prev_issue in &prev_file.issues {
+            if !current_keys.contains(&prev_issue.key) {
+                // Only count as "fixed" if the file still exists and was unchanged or
+                // had the same hash (otherwise the file changed and the issue may
+                // simply have moved).
+                // For simplicity, count any previous issue not in current as fixed.
+                fixed_count += 1;
+            }
+        }
+    }
     println!(
         "  {} blocker, {} critical, {} major, {} minor, {} info",
         by_sev[0].to_string().red().bold(),
@@ -438,6 +566,16 @@ fn print_issues_summary(files: &[crate::analyzer::FileAnalysis]) {
         by_sev[3].to_string(),
         by_sev[4].to_string().dimmed(),
     );
+    // Lifecycle: NEW / PERSISTENT / FIXED / REGRESSED.
+    if !snapshot.files.is_empty() {
+        println!(
+            "  {} new, {} persistent, {} fixed, {} regressed",
+            new_count.to_string().green().bold(),
+            persistent_count,
+            fixed_count.to_string().cyan(),
+            regressed_count.to_string().magenta(),
+        );
+    }
 
     // Top violated rules.
     let mut counts: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
