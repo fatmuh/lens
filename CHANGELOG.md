@@ -10,6 +10,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Rule engine (Phase 2)** — **65 hand-rolled + 493 SonarJS-compatible rule stubs = 556 rules total**
 
+  **v0.2.0 — SonarQube parity (Tier 1–5)**:
+
+  Tier 1 — New Code Period:
+  - State tracking via `.lens/state.json` (file hashes + issue snapshots)
+  - Per-file status: ADDED | CHANGED | UNCHANGED
+  - CLI flag: `--new-code` to filter issues to only new code
+  - CLI flag: `--no-state` for read-only scans (CI, dry-runs)
+
+  Tier 2 — Multi-Coverage:
+  - CLI flags: `--coverage-ut GLOB`, `--coverage-it GLOB`
+  - Config keys: `[coverage].ut_paths`, `[coverage].it_paths`
+  - CoverageReport now has `ut_*`, `it_*`, `new_*` fields
+  - Output: separate `ut_coverage` and `it_coverage` percentages
+
+  Tier 3 — Issue Lifecycle:
+  - Tracks issue identity (rule+line+message) across scans
+  - Per-issue status: NEW | PERSISTENT | FIXED | REGRESSED
+  - Report line: "X new, Y persistent, Z fixed, W regressed"
+
+  Tier 4 — Cognitive Complexity (S3776):
+  - `src/analyzer/cognitive.rs` — own implementation based on the
+    public Cognitive Complexity whitepaper (G. Ann Campbell, 2018)
+  - Nesting penalty: +1 per nesting level for control flow structures
+  - Counts if/else/ternary/switch/for/while/catch/&&/||/??/recursion
+  - `max-function-complexity` rule now uses CC instead of cyclomatic
+  - Default threshold raised to 15 (matching SonarJS S3776)
+
+  Tier 5 — Quality Gate (new-code aware):
+  - New gate: `new_coverage` (only fires if state exists)
+  - Informational: `ut_coverage`, `it_coverage`
+  - Rating gates: A–E based on issue density (reliability/security/maintainability)
+
   **SonarJS 1:1 compatibility layer**:
   - 493 SonarJS rules (S100–S6772) recognized with their S-ID, title,
     severity, and type — listed in `lens rules` for compatibility
@@ -123,8 +155,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     name, severity, languages, and (with `-v`) description. Supports
     `--language` filter and `--format json`.
 - **Rule tests**: 65 new unit tests in `src/rules/rule_tests.rs`,
-  one per rule (plus registry sanity checks). 145/145 total tests
-  passing (132 unit + 13 integration).
+  one per rule (plus registry sanity checks). 155/155 total tests
+  passing (142 unit + 13 integration).
 
 ## [0.1.1] — 2026-06-07
 

@@ -150,6 +150,7 @@ pub fn run(config_arg: Option<PathBuf>, args: ScanArgs) -> Result<ExitCode> {
             &coverage_report,
             nosonar_total,
             duration,
+            args.new_code,
         ),
         Format::Json => report_json(
             &ctx,
@@ -467,6 +468,7 @@ fn report_terminal(
     coverage: &CoverageReport,
     nosonar_total: usize,
     duration: std::time::Duration,
+    new_code: bool,
 ) {
     use comfy_table::Table;
 
@@ -501,7 +503,7 @@ fn report_terminal(
 
     print_duplication_summary(&analysis.duplication);
     print_coverage_summary(coverage);
-    print_issues_summary(&analysis.files, &ctx.root);
+    print_issues_summary(&analysis.files, &ctx.root, new_code);
 
     println!();
     println!(
@@ -512,12 +514,31 @@ fn report_terminal(
     println!();
 }
 
-fn print_issues_summary(files: &[crate::analyzer::FileAnalysis], scan_root: &Path) {
-    let all: Vec<&Issue> = files.iter().flat_map(|f| f.issues.iter()).collect();
+fn print_issues_summary(files: &[crate::analyzer::FileAnalysis], scan_root: &Path, new_code: bool) {
+    let snapshot = state::Snapshot::load(scan_root);
+    // When --new-code is set, only NEW issues are shown; the rest are
+    // hidden but the lifecycle counts still reflect the full picture.
+    let all: Vec<&Issue> = if new_code {
+        files.iter()
+            .flat_map(|f| f.issues.iter())
+            .filter(|i| matches!(snapshot.classify_issue(i), state::IssueStatus::New))
+            .collect()
+    } else {
+        files.iter().flat_map(|f| f.issues.iter()).collect()
+    };
     if all.is_empty() {
+        if new_code && !snapshot.files.is_empty() {
+            println!("\n  {}", "Issues (new code only)".bold().cyan());
+            println!("  {} no new issues since last scan", "✓".green());
+        }
         return;
     }
-    println!("\n  {}", "Issues".bold().cyan());
+    if new_code && !snapshot.files.is_empty() {
+        println!("\n  {}", "Issues (new code only)".bold().cyan());
+        println!("  {} filter active — persistent issues hidden", "→".dimmed());
+    } else {
+        println!("\n  {}", "Issues".bold().cyan());
+    }
     let mut by_sev = [0usize; 5];
     for i in &all {
         match i.severity {
@@ -529,7 +550,6 @@ fn print_issues_summary(files: &[crate::analyzer::FileAnalysis], scan_root: &Pat
         }
     }
     // Issue lifecycle tracking (NEW / PERSISTENT / FIXED).
-    let snapshot = state::Snapshot::load(scan_root);
     let mut new_count = 0usize;
     let mut persistent_count = 0usize;
     let mut fixed_count = 0usize;
