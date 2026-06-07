@@ -8,7 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Rule engine (Phase 2)** — **65 built-in TypeScript/JavaScript rules**
+- **Rule engine (Phase 2)** — **65 hand-rolled + 493 SonarJS-compatible rule stubs = 556 rules total**
+
+  **SonarJS 1:1 compatibility layer**:
+  - 493 SonarJS rules (S100–S6772) recognized with their S-ID, title,
+    severity, and type — listed in `lens rules` for compatibility
+  - Auto-generated from upstream SonarJS rule JSON (Apache 2.0) via
+    `scripts/gen_sonar_rules.py` → `src/rules/sonar_compat.rs`
+  - 65 hand-rolled rules (the most impactful) are the firing version;
+    428 SonarJS-only stubs are no-ops
+  - Users can write `quality-gate.toml` rules using SonarQube S-IDs
+    (e.g. `S1523` = `no-eval`)
   that produce actionable `Issue`s with file:line location and a one-line
   fix suggestion. Each rule is a separate file in `src/rules/builtin/`,
   implementing the [`Rule`](src/rules/mod.rs) trait:
