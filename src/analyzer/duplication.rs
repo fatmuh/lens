@@ -778,6 +778,8 @@ fn longest_common_substring(a: &[u64], b: &[u64]) -> Option<(usize, usize, usize
     }
 }
 
+/// Map a window position back to its source line.
+#[allow(dead_code)]
 fn token_to_line(f: &FileFingerprints, win_pos: usize, _k: usize) -> u32 {
     let token_pos = f.token_positions.get(win_pos).copied().unwrap_or(0);
     f.line_numbers.get(token_pos).copied().unwrap_or(0)

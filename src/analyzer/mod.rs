@@ -18,6 +18,7 @@ use crate::scanner::language::{self, Language};
 
 /// Configuration for the analysis run.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct AnalyzeConfig {
     /// Which duplication algorithm to use.
     pub duplication_mode: DuplicationMode,
@@ -57,8 +58,11 @@ impl Default for AnalyzeConfig {
 #[derive(Debug, Clone)]
 pub struct FileAnalysis {
     pub path: PathBuf,
+    /// Detected language (used for per-language metrics and the report).
+    #[allow(dead_code)]
     pub language: Option<Language>,
     /// True for files that we successfully parsed and tokenized.
+    #[allow(dead_code)]
     pub analyzed: bool,
     /// AST-based metrics (only for TypeScript/TSX).
     pub metrics: Option<metrics::FileMetrics>,
