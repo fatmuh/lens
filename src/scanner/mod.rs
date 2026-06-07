@@ -151,6 +151,7 @@ pub fn run(config_arg: Option<PathBuf>, args: ScanArgs) -> Result<ExitCode> {
             nosonar_total,
             duration,
             args.new_code,
+            args.since_days,
         ),
         Format::Json => report_json(
             &ctx,
@@ -469,6 +470,7 @@ fn report_terminal(
     nosonar_total: usize,
     duration: std::time::Duration,
     new_code: bool,
+    since_days: Option<u32>,
 ) {
     use comfy_table::Table;
 
@@ -503,7 +505,7 @@ fn report_terminal(
 
     print_duplication_summary(&analysis.duplication);
     print_coverage_summary(coverage);
-    print_issues_summary(&analysis.files, &ctx.root, new_code);
+    print_issues_summary(&analysis.files, &ctx.root, new_code, since_days);
 
     println!();
     println!(
@@ -514,28 +516,38 @@ fn report_terminal(
     println!();
 }
 
-fn print_issues_summary(files: &[crate::analyzer::FileAnalysis], scan_root: &Path, new_code: bool) {
+fn print_issues_summary(files: &[crate::analyzer::FileAnalysis], scan_root: &Path, new_code: bool, since_days: Option<u32>) {
     let snapshot = state::Snapshot::load(scan_root);
     // When --new-code is set, only NEW issues are shown; the rest are
     // hidden but the lifecycle counts still reflect the full picture.
-    let all: Vec<&Issue> = if new_code {
-        files.iter()
-            .flat_map(|f| f.issues.iter())
-            .filter(|i| matches!(snapshot.classify_issue(i), state::IssueStatus::New))
-            .collect()
-    } else {
-        files.iter().flat_map(|f| f.issues.iter()).collect()
-    };
+    // --since-days filters by file mtime. The two combine with OR logic.
+    let all: Vec<&Issue> = files.iter()
+        .flat_map(|f| f.issues.iter())
+        .filter(|i| {
+            let new_match = new_code && matches!(snapshot.classify_issue(i), state::IssueStatus::New);
+            let mtime_match = since_days.map_or(true, |d| state::modified_within_days(&i.file, d));
+            match (new_code, since_days) {
+                (true, Some(_)) => new_match || mtime_match,
+                (true, None) => new_match,
+                (false, Some(_)) => mtime_match,
+                (false, None) => true,
+            }
+        })
+        .collect();
     if all.is_empty() {
-        if new_code && !snapshot.files.is_empty() {
-            println!("\n  {}", "Issues (new code only)".bold().cyan());
-            println!("  {} no new issues since last scan", "✓".green());
+        if new_code || since_days.is_some() {
+            println!("\n  {}", "Issues (filtered)".bold().cyan());
+            println!("  {} no matching issues", "✓".green());
         }
         return;
     }
-    if new_code && !snapshot.files.is_empty() {
-        println!("\n  {}", "Issues (new code only)".bold().cyan());
-        println!("  {} filter active — persistent issues hidden", "→".dimmed());
+    let filtered = new_code || since_days.is_some();
+    if filtered {
+        let mut parts = vec!["Issues".to_string()];
+        if new_code { parts.push("new code".into()); }
+        if let Some(d) = since_days { parts.push(format!("last {} days", d)); }
+        println!("\n  {}", format!("{} ({})", parts[0], parts[1..].join(" + ")).bold().cyan());
+        println!("  {} filter active — other issues hidden", "→".dimmed());
     } else {
         println!("\n  {}", "Issues".bold().cyan());
     }

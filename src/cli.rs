@@ -134,6 +134,12 @@ pub struct ScanArgs {
     /// scan. Useful for read-only scans (CI, dry-runs).
     #[arg(long)]
     pub no_state: bool,
+
+    /// Only show issues from files modified within the last N days.
+    /// Uses file mtime (no state needed). If `--new-code` is also set,
+    /// the two filters combine with OR logic.
+    #[arg(long = "since-days", value_name = "DAYS")]
+    pub since_days: Option<u32>,
 }
 
 #[derive(Debug, Args)]

@@ -147,6 +147,18 @@ pub struct TrackedResult {
     pub status: IssueStatus,
 }
 
+/// True if `path` was modified within the last `days` days.
+/// Used by `--since-days` to filter to recently-changed code.
+pub fn modified_within_days(path: &Path, days: u32) -> bool {
+    let Ok(meta) = std::fs::metadata(path) else { return false; };
+    let Ok(modified) = meta.modified() else { return false; };
+    let Ok(elapsed) = std::time::SystemTime::now().duration_since(modified) else {
+        return false;
+    };
+    let limit = std::time::Duration::from_secs(u64::from(days) * 86_400);
+    elapsed <= limit
+}
+
 /// Apply the snapshot to a list of issues, returning tracked results.
 pub fn track_issues(snapshot: &Snapshot, issues: Vec<Issue>) -> Vec<TrackedResult> {
     issues.into_iter().map(|issue| {
@@ -227,5 +239,22 @@ mod tests {
         });
         let new_issue = fake_issue("no-eqeqeq", 20, "new msg");
         assert_eq!(snap.classify_issue(&new_issue), IssueStatus::Regressed);
+    }
+
+    #[test]
+    fn modified_within_days_for_just_created_file() {
+        // A file we just wrote should be within 1 day.
+        let path = std::env::temp_dir().join("lens-mtime-test.txt");
+        std::fs::write(&path, "x").unwrap();
+        assert!(super::modified_within_days(&path, 1));
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn modified_within_days_missing_file_returns_false() {
+        // Missing files shouldn't crash; they just don't qualify.
+        let path = std::env::temp_dir().join("lens-mtime-missing-xyz.txt");
+        std::fs::remove_file(&path).ok();
+        assert!(!super::modified_within_days(&path, 30));
     }
 }
