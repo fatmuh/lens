@@ -54,6 +54,10 @@ pub enum Command {
     #[command(visible_alias = "w")]
     Watch(WatchArgs),
 
+    /// Configure AI settings (API key, model, base URL).
+    #[command(visible_alias = "cfg")]
+    Setup,
+
     /// Print version information.
     Version,
 }

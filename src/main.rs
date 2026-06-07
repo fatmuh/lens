@@ -16,6 +16,7 @@ mod coverage;
 mod report;
 mod rules;
 mod scanner;
+mod setup;
 mod state;
 mod util;
 mod rating;
@@ -53,12 +54,28 @@ fn run(cli: Cli) -> Result<ExitCode> {
             println!("rust  {}", rustc_version_runtime());
             Ok(ExitCode::SUCCESS)
         }
+        Command::Setup => setup::run_setup(),
         Command::Fix(args) => {
+            let mut base_url = args.ai_base_url.clone();
+            let mut model = args.ai_model.clone();
+            let api_key = if let Ok(k) = std::env::var("LENS_AI_API_KEY") {
+                k
+            } else if let Ok(cfg) = setup::load_config() {
+                // Fallback to ~/.lens/config.toml
+                if base_url == "https://api.openai.com/v1" && !cfg.ai.base_url.is_empty() {
+                    base_url = cfg.ai.base_url.clone();
+                }
+                if model == "gpt-4o" && !cfg.ai.model.is_empty() {
+                    model = cfg.ai.model.clone();
+                }
+                cfg.ai.api_key.clone()
+            } else {
+                anyhow::bail!("LENS_AI_API_KEY not set. Run `lens setup` to configure AI.");
+            };
             let config = agent::client::AiConfig {
-                api_key: std::env::var("LENS_AI_API_KEY")
-                    .context("LENS_AI_API_KEY is required. Set it or use: $env:LENS_AI_API_KEY = \"sk-...\"")?,
-                base_url: args.ai_base_url.clone(),
-                model: args.ai_model.clone(),
+                api_key,
+                base_url: base_url.clone(),
+                model: model.clone(),
             };
             let root = args.path.canonicalize().context("resolving path")?;
             let rt = tokio::runtime::Runtime::new().context("creating runtime")?;
@@ -88,11 +105,25 @@ fn run(cli: Cli) -> Result<ExitCode> {
             Ok(ExitCode::SUCCESS)
         }
         Command::Watch(args) => {
+            let mut base_url = args.ai_base_url.clone();
+            let mut model = args.ai_model.clone();
+            let api_key = if let Ok(k) = std::env::var("LENS_AI_API_KEY") {
+                k
+            } else if let Ok(cfg) = setup::load_config() {
+                if base_url == "https://api.openai.com/v1" && !cfg.ai.base_url.is_empty() {
+                    base_url = cfg.ai.base_url.clone();
+                }
+                if model == "gpt-4o" && !cfg.ai.model.is_empty() {
+                    model = cfg.ai.model.clone();
+                }
+                cfg.ai.api_key.clone()
+            } else {
+                anyhow::bail!("LENS_AI_API_KEY not set. Run `lens setup` to configure AI.");
+            };
             let config = agent::client::AiConfig {
-                api_key: std::env::var("LENS_AI_API_KEY")
-                    .context("LENS_AI_API_KEY is required")?,
-                base_url: args.ai_base_url.clone(),
-                model: args.ai_model.clone(),
+                api_key,
+                base_url: base_url.clone(),
+                model: model.clone(),
             };
             let mode = match args.mode {
                 cli::AgentMode::Coverage => agent::watch::AgentMode::Coverage,
