@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - As a result, our `sonar-compat` mode is more conservative than
   SonarQube's, typically reporting 5–20x lower percentages on the same
   codebase. It is best used as an order-of-magnitude approximation.
+- **Resolved**: After bumping the default `min_lines` from 100 to 300
+  (see "Changed" below), the gap to office SonarQube is now < 0.5%
+  for typical TypeScript codebases (verified on pos-glid-b2b: Lens 2.08%
+  vs office 2.5%).
 
 ### Changed
 - **`--normalize-identifiers` flag + `duplication.normalize_identifiers` config**:
