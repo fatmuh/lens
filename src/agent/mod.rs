@@ -9,4 +9,5 @@
 pub mod client;
 pub mod coverage;
 pub mod dedup;
+pub mod test_runner;
 pub mod watch;

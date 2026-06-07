@@ -58,6 +58,10 @@ pub enum Command {
     #[command(visible_alias = "cfg")]
     Setup,
 
+    /// Run tests with coverage and optionally fix gaps with AI.
+    #[command(visible_alias = "t")]
+    Test(TestArgs),
+
     /// Print version information.
     Version,
 }
@@ -282,4 +286,40 @@ pub enum AgentMode {
     Coverage,
     Dedup,
     All,
+}
+
+
+#[derive(Debug, Args)]
+pub struct TestArgs {
+    /// Directory to test (default: current dir).
+    #[arg(value_name = "PATH", default_value = ".")]
+    pub path: PathBuf,
+
+    /// Run with coverage (generates LCOV report).
+    #[arg(long, short = 'c', default_value_t = true)]
+    pub coverage: bool,
+
+    /// After running tests, feed coverage gaps to AI agent.
+    #[arg(long, short = 'f', default_value_t = false)]
+    pub fix: bool,
+
+    /// Agent mode when fixing (only used with --fix).
+    #[arg(long, short = 'm', value_enum, default_value_t = AgentMode::Coverage)]
+    pub mode: AgentMode,
+
+    /// Maximum number of files to fix per run.
+    #[arg(long, default_value_t = 5)]
+    pub max_files: usize,
+
+    /// Only detect the test framework, don't run.
+    #[arg(long, default_value_t = false)]
+    pub detect_only: bool,
+
+    /// OpenAI-compatible API base URL (overrides ~/.lens/config.toml).
+    #[arg(long, env = "LENS_AI_BASE_URL")]
+    pub ai_base_url: Option<String>,
+
+    /// AI model to use (overrides ~/.lens/config.toml).
+    #[arg(long, env = "LENS_AI_MODEL")]
+    pub ai_model: Option<String>,
 }
