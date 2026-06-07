@@ -221,7 +221,7 @@ lens:
 
 ```json
 {
-  "lens_version": "0.1.0",
+  "lens_version": "0.2.0",
   "scan": { "root": "...", "duration_ms": 13180 },
   "summary": {
     "total_files": 1206,

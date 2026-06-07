@@ -5,7 +5,7 @@ All notable changes to Lens will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0] — 2026-06-07
 
 ### Added
 - **Rule engine (Phase 2)** — **65 hand-rolled + 493 SonarJS-compatible rule stubs = 556 rules total**
@@ -283,6 +283,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (most-impacted first).
 - Coverage parsing is essentially free (file I/O + simple parsing).
 
-[Unreleased]: https://github.com/fatmuh/lens/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/fatmuh/lens/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/fatmuh/lens/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/fatmuh/lens/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/fatmuh/lens/releases/tag/v0.1.0
