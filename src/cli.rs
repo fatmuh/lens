@@ -140,6 +140,24 @@ pub struct ScanArgs {
     /// the two filters combine with OR logic.
     #[arg(long = "since-days", value_name = "DAYS")]
     pub since_days: Option<u32>,
+
+    /// Fail the quality gate if any of (reliability, security,
+    /// maintainability) is worse than this letter. E.g. `--max-rating C`
+    /// fails on D or E. Default: don't gate on ratings.
+    #[arg(long = "max-rating", value_name = "LETTER", value_parser = parse_rating)]
+    pub max_rating: Option<crate::rating::Rating>,
+}
+
+fn parse_rating(s: &str) -> Result<crate::rating::Rating, String> {
+    use crate::rating::Rating::*;
+    match s.to_ascii_uppercase().as_str() {
+        "A" => Ok(A),
+        "B" => Ok(B),
+        "C" => Ok(C),
+        "D" => Ok(D),
+        "E" => Ok(E),
+        _ => Err(format!("invalid rating '{}', expected A|B|C|D|E", s)),
+    }
 }
 
 #[derive(Debug, Args)]

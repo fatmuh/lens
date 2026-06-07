@@ -16,6 +16,7 @@ mod rules;
 mod scanner;
 mod state;
 mod util;
+mod rating;
 
 use cli::{Cli, Command};
 

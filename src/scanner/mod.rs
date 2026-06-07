@@ -183,6 +183,7 @@ pub fn run(config_arg: Option<PathBuf>, args: ScanArgs) -> Result<ExitCode> {
             &coverage_report,
             config.duplication.fail_above_percent,
             config.coverage.fail_below_percent,
+            args.max_rating,
         );
         if !gate_passed {
             return Ok(ExitCode::from(1));
@@ -305,9 +306,23 @@ fn evaluate_gate(
     coverage: &CoverageReport,
     fail_above_percent: f64,
     fail_below_percent: f64,
+    max_rating: Option<crate::rating::Rating>,
 ) -> bool {
     let mut all_pass = true;
     let mut messages: Vec<(bool, String)> = Vec::new();
+
+    // Quality ratings (Reliability / Security / Maintainability).
+    let (rel, sec, maint) = crate::rating::compute_ratings(&analysis.files);
+    if let Some(max) = max_rating {
+        for (name, r) in [("reliability", rel), ("security", sec), ("maintainability", maint)] {
+            if rating_worse(r, max) {
+                messages.push((false, format!("{} rating {} > max {}", name, r.as_str(), max.as_str())));
+                all_pass = false;
+            } else {
+                messages.push((true, format!("{} rating {} ≤ max {}", name, r.as_str(), max.as_str())));
+            }
+        }
+    }
 
     // Duplication check.
     let dup = &analysis.duplication;
@@ -505,6 +520,7 @@ fn report_terminal(
 
     print_duplication_summary(&analysis.duplication);
     print_coverage_summary(coverage);
+    print_ratings_summary(&analysis.files);
     print_issues_summary(&analysis.files, &ctx.root, new_code, since_days);
 
     println!();
@@ -740,6 +756,32 @@ fn print_coverage_summary(c: &CoverageReport) {
             );
         }
     }
+}
+
+fn rating_worse(actual: crate::rating::Rating, max: crate::rating::Rating) -> bool {
+    use crate::rating::Rating::*;
+    let order = [A, B, C, D, E];
+    let a = order.iter().position(|r| *r == actual).unwrap_or(0);
+    let m = order.iter().position(|r| *r == max).unwrap_or(0);
+    a > m
+}
+
+fn print_ratings_summary(files: &[crate::analyzer::FileAnalysis]) {
+    let (rel, sec, maint) = crate::rating::compute_ratings(files);
+    println!("\n  {}", "Quality ratings".bold().cyan());
+    let p = |r: crate::rating::Rating| format!("{}{}{}", r.ansi(), r.as_str(), "\x1b[0m");
+    println!(
+        "  Reliability:       {}    (files with Blocker or Critical issues)",
+        p(rel)
+    );
+    println!(
+        "  Security:          {}    (files with Blocker issues)",
+        p(sec)
+    );
+    println!(
+        "  Maintainability:   {}    (files with Major+ issues)",
+        p(maint)
+    );
 }
 
 fn print_duplication_summary(d: &DuplicationReport) {
