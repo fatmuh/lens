@@ -10,6 +10,7 @@
 //! them, with rules for the project language enabled automatically.
 
 pub mod builtin;
+pub mod sonar_compat;
 
 #[cfg(test)]
 mod rule_tests;
@@ -128,8 +129,14 @@ impl Default for RuleRegistry {
 
 impl RuleRegistry {
     /// Build the default registry with all built-in rules enabled.
+    ///
+    /// Includes ~60 hand-implemented rules plus 493 SonarJS-compatible rule
+    /// stubs (recognized by SonarQube S-ID). Unimplemented rules return
+    /// no issues but are listed in `lens rules` for compatibility.
     pub fn default_registry() -> Self {
-        Self { rules: builtin::all_rules() }
+        let mut rules = builtin::all_rules();
+        rules.extend(sonar_compat::all_sonar_stubs());
+        Self { rules }
     }
 
     /// All rules in the registry.
