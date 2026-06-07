@@ -211,10 +211,11 @@ pub fn detect_with_mode(
     window: usize,
     min_tokens: usize,
     min_lines: usize,
+    normalize_identifiers: bool,
 ) -> DuplicationReport {
     match mode {
         DuplicationMode::Token => detect(files, k, window, min_tokens),
-        DuplicationMode::Sonar => detect_sonar(files, min_lines),
+        DuplicationMode::Sonar => detect_sonar(files, min_lines, normalize_identifiers),
     }
 }
 
@@ -240,10 +241,13 @@ pub fn detect_with_mode(
 pub fn detect_sonar(
     files: &[(PathBuf, Vec<Token>)],
     min_lines: usize,
+    normalize_identifiers: bool,
 ) -> DuplicationReport {
     // 1. Per-file, per-line hashes.
-    let per_file: Vec<Vec<(u32, u64)>> =
-        files.iter().map(|(_, toks)| compute_line_hashes(toks)).collect();
+    let per_file: Vec<Vec<(u32, u64)>> = files
+        .iter()
+        .map(|(_, toks)| compute_line_hashes(toks, normalize_identifiers))
+        .collect();
     let total_lines: u64 = per_file.iter().map(|v| v.len() as u64).sum();
 
     // 2. Find runs of identical consecutive lines in each file.
@@ -333,7 +337,17 @@ pub fn detect_sonar(
 
 /// Group tokens by source line and produce a hash for each line's
 /// whitespace-normalized token sequence.
-fn compute_line_hashes(tokens: &[Token]) -> Vec<(u32, u64)> {
+///
+/// When `normalize_identifiers` is true, tokens that look like identifiers
+/// (a-zA-Z0-9_, starting with letter or _) are replaced with the literal
+/// `"@id"` before hashing. This makes the line hash invariant to variable
+/// renames — `function add(a, b) { return a + b; }` and
+/// `function sum(x, y) { return x + y; }` then produce the same hash,
+/// which is closer to how SonarQube's "duplications" metric behaves.
+fn compute_line_hashes(
+    tokens: &[Token],
+    normalize_identifiers: bool,
+) -> Vec<(u32, u64)> {
     let mut by_line: BTreeMap<u32, Vec<&Token>> = BTreeMap::new();
     for tok in tokens {
         by_line.entry(tok.line).or_default().push(tok);
@@ -343,11 +357,29 @@ fn compute_line_hashes(tokens: &[Token]) -> Vec<(u32, u64)> {
         .map(|(line_num, toks)| {
             let mut h = std::collections::hash_map::DefaultHasher::new();
             for tok in toks {
-                tok.text.trim().hash(&mut h);
+                let normalized = if normalize_identifiers && is_identifier(&tok.text) {
+                    "@id"
+                } else {
+                    tok.text.trim()
+                };
+                normalized.hash(&mut h);
             }
             (*line_num, h.finish())
         })
         .collect()
+}
+
+/// Heuristic: a token is treated as an identifier if it starts with an
+/// ASCII letter or `_` and contains only ASCII letters, digits, and `_`.
+/// This is intentionally permissive (it doesn't know about language-specific
+/// keywords) but is good enough for line-hash normalization in practice.
+fn is_identifier(s: &str) -> bool {
+    let mut chars = s.chars();
+    match chars.next() {
+        Some(c) if c.is_ascii_alphabetic() || c == '_' => {}
+        _ => return false,
+    }
+    chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
 /// Find maximal runs of consecutive lines with the same hash.
@@ -705,6 +737,7 @@ mod tests {
         let report = detect_sonar(
             &[("a.ts".into(), tokens_a), ("b.ts".into(), tokens_b)],
             100,
+            false,
         );
         assert!(
             report.duplication_percent > 0.0,
@@ -730,6 +763,7 @@ mod tests {
         let report = detect_sonar(
             &[("a.ts".into(), tokens_a), ("b.ts".into(), tokens_b)],
             100,
+            false,
         );
         assert_eq!(report.duplication_percent, 0.0);
         assert!(report.blocks.is_empty());
@@ -752,7 +786,7 @@ mod tests {
                 }
             }
         }
-        let report = detect_sonar(&[("a.ts".into(), tokens)], 100);
+        let report = detect_sonar(&[("a.ts".into(), tokens)], 100, false);
         assert_eq!(report.duplication_percent, 0.0);
         assert!(report.blocks.is_empty());
     }
@@ -769,6 +803,7 @@ mod tests {
         let report = detect_sonar(
             &[("a.ts".into(), tokens_a), ("b.ts".into(), tokens_b)],
             50,
+            false,
         );
         assert_eq!(report.duplication_percent, 0.0);
         assert!(report.blocks.is_empty());
@@ -793,6 +828,7 @@ mod tests {
                 ("c.ts".into(), tokens_c),
             ],
             100,
+            false,
         );
         assert!(report.duplication_percent > 0.0);
         // All three files should be in the occurrences list.
@@ -817,9 +853,54 @@ mod tests {
             10,
             100,
             100,
+            false,
         );
         assert_eq!(report.mode, DuplicationMode::Sonar);
         assert!(report.duplication_percent > 0.0);
+    }
+
+    #[test]
+    fn sonar_normalized_catches_renamed_identifiers() {
+        // Two blocks that differ ONLY by identifier names.
+        // a.ts:   function add(a, b) { return a + b; }
+        // b.ts:   function sum(x, y) { return x + y; }
+        // With normalization, these should match. Without, they should not.
+        let make = |fname: &str, fnname: &str, p1: &str, p2: &str| {
+            let mut tokens = Vec::new();
+            let mut line = 1u32;
+            for word in ["function", fnname, "(", p1, ",", p2, ")", "{"] {
+                tokens.push(tl(word, line));
+            }
+            line += 1;
+            for word in ["return", p1, "+", p2, ";", "}"] {
+                tokens.push(tl(word, line));
+            }
+            (PathBuf::from(fname), tokens)
+        };
+        let a = make("a.ts", "add", "a", "b");
+        let b = make("b.ts", "sum", "x", "y");
+        let files: Vec<(PathBuf, Vec<Token>)> = vec![a, b];
+
+        // Without normalization: no match.
+        let strict = detect_sonar(&files, 1, false);
+        assert_eq!(
+            strict.duplication_percent, 0.0,
+            "strict mode should NOT match (different identifiers)"
+        );
+        assert!(strict.blocks.is_empty());
+
+        // With normalization: match (identifiers are replaced with @id).
+        let normalized = detect_sonar(&files, 1, true);
+        assert!(
+            normalized.duplication_percent > 0.0,
+            "normalized mode should match (renamed identifiers)"
+        );
+        // Two duplicate blocks: the `function … {` line and the `return …;` line.
+        assert!(
+            !normalized.blocks.is_empty(),
+            "expected at least one block, got {}",
+            normalized.blocks.len()
+        );
     }
 
     #[test]

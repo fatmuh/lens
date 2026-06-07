@@ -99,6 +99,7 @@ pub fn run(config_arg: Option<PathBuf>, args: ScanArgs) -> Result<ExitCode> {
         duplication_mode,
         min_duplicate_tokens: config.duplication.min_tokens,
         min_duplicate_lines: args.min_duplicate_lines.unwrap_or(config.duplication.min_lines),
+        normalize_identifiers: args.normalize_identifiers || config.duplication.normalize_identifiers,
         ..AnalyzeConfig::default()
     };
     let analysis = run_analyzer(&files, &analyze_cfg, &args);

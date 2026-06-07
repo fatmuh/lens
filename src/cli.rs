@@ -102,6 +102,13 @@ pub struct ScanArgs {
     /// SonarQube's default is 100; lower values are more sensitive.
     #[arg(long)]
     pub min_duplicate_lines: Option<usize>,
+
+    /// In `--sonar-compat` mode, normalize identifiers (variable, function,
+    /// class names) to `@id` before hashing. This makes the algorithm
+    /// invariant to renames, matching SonarQube's "duplications" metric
+    /// more closely. Off by default to preserve exact-hash semantics.
+    #[arg(long)]
+    pub normalize_identifiers: bool,
 }
 
 #[derive(Debug, Args)]

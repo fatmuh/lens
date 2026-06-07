@@ -86,6 +86,9 @@ pub struct DuplicationConfig {
     /// Minimum block size in lines (used by `mode = "sonar"`).
     /// SonarQube's default is 100.
     pub min_lines: usize,
+    /// In sonar mode, normalize identifiers to `@id` before hashing
+    /// (catches renamed-variable duplicates, like SonarQube does).
+    pub normalize_identifiers: bool,
     pub fail_above_percent: f64,
 }
 
@@ -95,6 +98,7 @@ impl Default for DuplicationConfig {
             mode: "token".to_string(),
             min_tokens: 100,
             min_lines: 100,
+            normalize_identifiers: false,
             fail_above_percent: 3.0,
         }
     }

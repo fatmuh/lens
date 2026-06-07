@@ -27,6 +27,10 @@ pub struct AnalyzeConfig {
     /// Minimum block size (in lines) to consider a duplicate.
     /// Used when `duplication_mode` is `Sonar`.
     pub min_duplicate_lines: usize,
+    /// If true, identifiers are normalized to `@id` before line hashing in
+    /// the SonarQube-compatible mode. This makes the algorithm invariant to
+    /// variable/function renames — closer to SonarQube's behavior.
+    pub normalize_identifiers: bool,
     /// k-gram size for shingling.
     pub k_shingle: usize,
     /// Window size for winnowing.
@@ -41,6 +45,7 @@ impl Default for AnalyzeConfig {
             duplication_mode: DuplicationMode::Token,
             min_duplicate_tokens: 100,
             min_duplicate_lines: 100,
+            normalize_identifiers: false,
             k_shingle: 5,
             winnow_window: 10,
             min_file_size_for_complexity: 0,
@@ -108,6 +113,7 @@ pub fn analyze(
         config.winnow_window,
         config.min_duplicate_tokens,
         config.min_duplicate_lines,
+        config.normalize_identifiers,
     );
 
     ProjectAnalysis { files: analyses, aggregate_metrics, duplication }
