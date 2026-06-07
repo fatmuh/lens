@@ -3,6 +3,9 @@
 //! Phase 1: TypeScript-only metrics + language-agnostic token-level
 //! duplication detection. Designed so additional languages can be plugged
 //! in by adding a new entry in `parser::get_language`.
+//!
+//! Phase 2: rule engine (see [`crate::rules`]) — runs every enabled rule
+//! on each file and collects `Issue`s.
 
 pub mod duplication;
 pub mod metrics;
@@ -14,10 +17,11 @@ use std::path::PathBuf;
 use rayon::prelude::*;
 
 use crate::analyzer::duplication::DuplicationMode;
+use crate::rules::{Issue, RuleRegistry};
 use crate::scanner::language::{self, Language};
 
 /// Configuration for the analysis run.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 #[allow(dead_code)]
 pub struct AnalyzeConfig {
     /// Which duplication algorithm to use.
@@ -38,6 +42,9 @@ pub struct AnalyzeConfig {
     pub winnow_window: usize,
     /// Minimum fingerprint count per file for metrics to be considered.
     pub min_file_size_for_complexity: usize,
+    /// Rule registry to use for issue detection. If empty, rules are
+    /// disabled.
+    pub rules: RuleRegistry,
 }
 
 impl Default for AnalyzeConfig {
@@ -50,6 +57,7 @@ impl Default for AnalyzeConfig {
             k_shingle: 5,
             winnow_window: 10,
             min_file_size_for_complexity: 0,
+            rules: RuleRegistry::default_registry(),
         }
     }
 }
@@ -70,6 +78,8 @@ pub struct FileAnalysis {
     pub tokens: Option<Vec<tokenize::Token>>,
     /// NOSONAR marker count (kept here so the report has a single source).
     pub nosonar_count: usize,
+    /// Issues found by rules (Phase 2).
+    pub issues: Vec<Issue>,
 }
 
 /// Project-wide analysis result.
@@ -124,7 +134,8 @@ pub fn analyze(
 }
 
 /// Analyze a single file: detect language, tokenize, parse for metrics,
-/// count NOSONAR markers. Errors are non-fatal — we just skip that file.
+/// count NOSONAR markers, run rules. Errors are non-fatal — we just skip
+/// that file.
 fn analyze_file(path: &PathBuf, config: &AnalyzeConfig) -> FileAnalysis {
     let lang = language::detect(path);
 
@@ -139,6 +150,7 @@ fn analyze_file(path: &PathBuf, config: &AnalyzeConfig) -> FileAnalysis {
                 metrics: None,
                 tokens: None,
                 nosonar_count: 0,
+                issues: Vec::new(),
             };
         }
     };
@@ -159,7 +171,18 @@ fn analyze_file(path: &PathBuf, config: &AnalyzeConfig) -> FileAnalysis {
         _ => None,
     };
 
-    let _ = config; // config not used per-file right now
+    // Phase 2: run all enabled rules. Build a partial FileAnalysis for the
+    // rules to consume (no `issues` field — that's what we're computing).
+    let partial = FileAnalysis {
+        path: path.clone(),
+        language: lang,
+        analyzed: true,
+        metrics: metrics.clone(),
+        tokens: Some(tokens.clone()),
+        nosonar_count,
+        issues: Vec::new(),
+    };
+    let issues = config.rules.run(&partial, &content);
 
     FileAnalysis {
         path: path.clone(),
@@ -168,5 +191,6 @@ fn analyze_file(path: &PathBuf, config: &AnalyzeConfig) -> FileAnalysis {
         metrics,
         tokens: Some(tokens),
         nosonar_count,
+        issues,
     }
 }

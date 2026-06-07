@@ -19,6 +19,7 @@ use crate::analyzer::{
 use crate::cli::{Format, ScanArgs};
 use crate::config::Config;
 use crate::coverage::{self, CoverageReport};
+use crate::rules::{Issue, Severity};
 use crate::util;
 
 pub mod discovery;
@@ -147,7 +148,7 @@ pub fn run(config_arg: Option<PathBuf>, args: ScanArgs) -> Result<ExitCode> {
             duration,
             args.output.as_ref(),
         )?,
-        Format::Sarif => report_sarif(&ctx, nosonar_total, args.output.as_ref())?,
+        Format::Sarif => report_sarif(&ctx, &analysis, nosonar_total, args.output.as_ref())?,
     }
 
     if args.watch {
@@ -286,6 +287,44 @@ fn evaluate_gate(
         }
     }
 
+    // Issue checks (Phase 2). Default thresholds: blocker=0, critical=0,
+    // major=-1 (no limit), minor=-1, info=-1. Override via [issues] in
+    // quality-gate.toml (not yet wired into config — this is a sensible
+    // default).
+    let mut by_sev = [0usize; 5];
+    for i in analysis.files.iter().flat_map(|a| a.issues.iter()) {
+        match i.severity {
+            Severity::Blocker => by_sev[0] += 1,
+            Severity::Critical => by_sev[1] += 1,
+            Severity::Major => by_sev[2] += 1,
+            Severity::Minor => by_sev[3] += 1,
+            Severity::Info => by_sev[4] += 1,
+        }
+    }
+    let thresholds: [(Severity, &str, usize); 2] = [
+        (Severity::Blocker, "blocker", 0),
+        (Severity::Critical, "critical", 0),
+    ];
+    for (sev, label, max) in thresholds {
+        let count = match sev {
+            Severity::Blocker => by_sev[0],
+            Severity::Critical => by_sev[1],
+            _ => unreachable!(),
+        };
+        if count > max {
+            messages.push((
+                false,
+                format!("{} {} > {} (max)", label, count, max),
+            ));
+            all_pass = false;
+        } else {
+            messages.push((
+                true,
+                format!("{} {} ≤ {}", label, count, max),
+            ));
+        }
+    }
+
     if all_pass {
         println!(
             "{} {}",
@@ -364,14 +403,92 @@ fn report_terminal(
 
     print_duplication_summary(&analysis.duplication);
     print_coverage_summary(coverage);
+    print_issues_summary(&analysis.files);
 
     println!();
     println!(
         "{}",
-        "  ℹ Phase 1+3+5+: TS-only metrics, block-level duplication, SonarQube-compatible mode (with identifier normalization), and coverage parsing (LCOV/Cobertura/JaCoCo)."
+        "  ℹ Phase 1+2+3+5+: TS metrics, rules engine (14 built-in rules), duplication, SonarQube-compatible mode, and coverage parsing (LCOV/Cobertura/JaCoCo)."
             .dimmed()
     );
     println!();
+}
+
+fn print_issues_summary(files: &[crate::analyzer::FileAnalysis]) {
+    let all: Vec<&Issue> = files.iter().flat_map(|f| f.issues.iter()).collect();
+    if all.is_empty() {
+        return;
+    }
+    println!("\n  {}", "Issues".bold().cyan());
+    let mut by_sev = [0usize; 5];
+    for i in &all {
+        match i.severity {
+            Severity::Blocker => by_sev[0] += 1,
+            Severity::Critical => by_sev[1] += 1,
+            Severity::Major => by_sev[2] += 1,
+            Severity::Minor => by_sev[3] += 1,
+            Severity::Info => by_sev[4] += 1,
+        }
+    }
+    println!(
+        "  {} blocker, {} critical, {} major, {} minor, {} info",
+        by_sev[0].to_string().red().bold(),
+        by_sev[1].to_string().red(),
+        by_sev[2].to_string().yellow(),
+        by_sev[3].to_string(),
+        by_sev[4].to_string().dimmed(),
+    );
+
+    // Top violated rules.
+    let mut counts: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
+    for i in &all {
+        *counts.entry(i.rule_id.as_str()).or_default() += 1;
+    }
+    let mut sorted: Vec<_> = counts.into_iter().collect();
+    sorted.sort_by(|a, b| b.1.cmp(&a.1));
+    println!("\n  Top violated rules:");
+    for (id, n) in sorted.iter().take(5) {
+        println!("    {:>5}  {}", n.to_string().bold(), id.dimmed());
+    }
+
+    // Top 5 issues (highest severity first, then by location).
+    let mut sorted_issues: Vec<&Issue> = all.clone();
+    sorted_issues.sort_by(|a, b| {
+        a.severity.cmp(&b.severity)
+            .then_with(|| a.file.cmp(&b.file))
+            .then_with(|| a.start_line.cmp(&b.start_line))
+    });
+    println!("\n  Top issues ({} of {} shown):", sorted_issues.len().min(10), sorted_issues.len());
+    for i in sorted_issues.iter().take(10) {
+        let name = i.file.file_name().and_then(|n| n.to_str()).unwrap_or("?");
+        println!(
+            "    {} [{:<8}] {}:{}-{}  {}",
+            severity_glyph(i.severity),
+            i.severity.as_str(),
+            name.dimmed(),
+            i.start_line,
+            i.end_line.max(i.start_line),
+            i.message,
+        );
+    }
+}
+
+fn severity_glyph(s: Severity) -> &'static str {
+    match s {
+        Severity::Blocker => "■",
+        Severity::Critical => "■",
+        Severity::Major => "■",
+        Severity::Minor => "·",
+        Severity::Info => "·",
+    }
+}
+
+fn severity_to_sarif_level(s: Severity) -> &'static str {
+    match s {
+        Severity::Blocker | Severity::Critical => "error",
+        Severity::Major => "warning",
+        Severity::Minor | Severity::Info => "note",
+    }
 }
 
 fn print_metrics_summary(m: &AggregateMetrics) {
@@ -657,6 +774,32 @@ fn report_json(
         "blocks": blocks_json,
     });
 
+    // Issues (Phase 2).
+    let all_issues: Vec<_> = analysis.files.iter()
+        .flat_map(|a| a.issues.iter())
+        .map(|i| {
+            let rel = i.file.strip_prefix(&ctx.root).unwrap_or(&i.file);
+            let rel = rel.to_string_lossy().replace('\\', "/");
+            serde_json::json!({
+                "rule_id": i.rule_id,
+                "severity": i.severity.as_str(),
+                "message": i.message,
+                "file": rel,
+                "start_line": i.start_line,
+                "end_line": i.end_line,
+                "start_column": i.start_column,
+                "end_column": i.end_column,
+            })
+        })
+        .collect();
+    let issue_counts: BTreeMap<String, usize> = {
+        let mut m: BTreeMap<String, usize> = BTreeMap::new();
+        for i in analysis.files.iter().flat_map(|a| a.issues.iter()) {
+            *m.entry(i.severity.as_str().to_string()).or_default() += 1;
+        }
+        m
+    };
+
     let payload = serde_json::json!({
         "lens_version": env!("CARGO_PKG_VERSION"),
         "scan": {
@@ -668,12 +811,14 @@ fn report_json(
             "total_files": ctx.files.len(),
             "nosonar_markers": analysis.files.iter().map(|a| a.nosonar_count).sum::<usize>(),
             "by_language": by_lang,
+            "issue_count": all_issues.len(),
+            "issues_by_severity": issue_counts,
         },
         "nosonar_by_file": nosonar,
         "metrics": metrics_json,
         "duplication": duplication_json,
         "coverage": coverage_json,
-        "issues": [],       // Phase 2
+        "issues": all_issues,
     });
     let json = serde_json::to_string_pretty(&payload)?;
     if let Some(p) = output {
@@ -1059,10 +1204,51 @@ fn html_escape(s: &str) -> String {
 
 fn report_sarif(
     ctx: &ScanContext,
-    nosonar_total: usize,
+    analysis: &ProjectAnalysis,
+    _nosonar_total: usize,
     output: Option<&PathBuf>,
 ) -> Result<()> {
     let display_root = util::path::normalize(&ctx.root);
+
+    // Build a list of unique rules + the list of results, mirroring the
+    // SARIF 2.1.0 schema.
+    let all_issues: Vec<&Issue> = analysis.files.iter()
+        .flat_map(|a| a.issues.iter())
+        .collect();
+    let mut rules_map: BTreeMap<String, serde_json::Value> = BTreeMap::new();
+    let mut results: Vec<serde_json::Value> = Vec::new();
+    for i in &all_issues {
+        rules_map
+            .entry(i.rule_id.clone())
+            .or_insert_with(|| {
+                serde_json::json!({
+                    "id": i.rule_id,
+                    "name": i.rule_id,
+                    "shortDescription": { "text": i.rule_id },
+                    "defaultConfiguration": { "level": severity_to_sarif_level(i.severity) },
+                })
+            });
+        let rel = i.file.strip_prefix(&ctx.root).unwrap_or(&i.file);
+        let rel = rel.to_string_lossy().replace('\\', "/");
+        results.push(serde_json::json!({
+            "ruleId": i.rule_id,
+            "level": severity_to_sarif_level(i.severity),
+            "message": { "text": i.message },
+            "locations": [{
+                "physicalLocation": {
+                    "artifactLocation": { "uri": rel },
+                    "region": {
+                        "startLine": i.start_line,
+                        "endLine": i.end_line.max(i.start_line),
+                        "startColumn": i.start_column + 1,
+                        "endColumn": i.end_column + 1,
+                    }
+                }
+            }]
+        }));
+    }
+    let rules: Vec<serde_json::Value> = rules_map.into_values().collect();
+
     let payload = serde_json::json!({
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
         "version": "2.1.0",
@@ -1072,10 +1258,10 @@ fn report_sarif(
                     "name": "lens",
                     "version": env!("CARGO_PKG_VERSION"),
                     "informationUri": "https://github.com/fatmuh/lens",
-                    "rules": []
+                    "rules": rules
                 }
             },
-            "results": [],
+            "results": results,
             "invocations": [{
                 "executionSuccessful": true,
                 "endTimeUtc": Utc::now().to_rfc3339(),
@@ -1084,8 +1270,7 @@ fn report_sarif(
                 "lens": {
                     "root": display_root,
                     "totalFiles": ctx.files.len(),
-                    "nosonarMarkers": nosonar_total,
-                    "phase": "1"
+                    "phase": "1+2"
                 }
             }
         }]

@@ -12,6 +12,7 @@ mod cli;
 mod config;
 mod coverage;
 mod report;
+mod rules;
 mod scanner;
 mod util;
 
@@ -42,7 +43,7 @@ fn run(cli: Cli) -> Result<ExitCode> {
     match cli.command {
         Command::Scan(args) => scanner::run(cli.config, args),
         Command::Init(args) => config::init(args),
-        Command::Rules => scanner::rules::list(),
+        Command::Rules(args) => scanner::rules::list(args),
         Command::Version => {
             println!("lens {}", env!("CARGO_PKG_VERSION"));
             println!("rust  {}", rustc_version_runtime());

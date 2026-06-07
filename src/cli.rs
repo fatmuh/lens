@@ -44,7 +44,7 @@ pub enum Command {
     Init(InitArgs),
 
     /// List all available rules.
-    Rules,
+    Rules(RulesArgs),
 
     /// Print version information.
     Version,
@@ -123,6 +123,21 @@ pub struct InitArgs {
     /// Target directory (default: current dir).
     #[arg(value_name = "PATH", default_value = ".")]
     pub path: PathBuf,
+}
+
+#[derive(Debug, Args)]
+pub struct RulesArgs {
+    /// Show full descriptions (one per rule).
+    #[arg(long, short = 'v')]
+    pub verbose: bool,
+
+    /// Filter by language (e.g. typescript, rust).
+    #[arg(long, value_name = "LANG")]
+    pub language: Option<String>,
+
+    /// Output format.
+    #[arg(long, short = 'f', value_enum, default_value_t = Format::Terminal)]
+    pub format: Format,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
