@@ -1,4 +1,4 @@
-//! Lens — Lightweight code quality scanner.
+//! Lens -- Lightweight code quality scanner.
 //!
 //! Entry point. Wires up logging, CLI parsing, and dispatches to subcommands.
 
@@ -81,7 +81,7 @@ fn run(cli: Cli) -> Result<ExitCode> {
             let root = args.path.canonicalize().context("resolving path")?;
             let rt = tokio::runtime::Runtime::new().context("creating runtime")?;
             println!("\n  {} Lens AI Fix Agent", "🤖".to_string().cyan());
-            println!("  {} Model: {}", "→".to_string().dimmed(), config.model);
+            println!("  {} Model: {}", "->".to_string().dimmed(), config.model);
 
             match args.mode {
                 cli::AgentMode::Coverage | cli::AgentMode::All => {
@@ -90,7 +90,7 @@ fn run(cli: Cli) -> Result<ExitCode> {
                             &config, &root, lcov, args.max_files,
                         ))?;
                     } else {
-                        println!("  {} No --coverage specified, skipping coverage agent", "→".to_string().dimmed());
+                        println!("  {} No --coverage specified, skipping coverage agent", "->".to_string().dimmed());
                     }
                 }
                 _ => {}
@@ -132,7 +132,7 @@ fn run(cli: Cli) -> Result<ExitCode> {
                 cli::AgentMode::All => agent::watch::AgentMode::All,
             };
             println!("\n  {} Lens AI Watch Agent", "👁".to_string().cyan());
-            println!("  {} Model: {}", "→".to_string().dimmed(), config.model);
+            println!("  {} Model: {}", "->".to_string().dimmed(), config.model);
             agent::watch::watch(
                 &args.path.canonicalize().context("resolving path")?,
                 &config,
@@ -150,6 +150,17 @@ fn rustc_version_runtime() -> &'static str {
     env!("CARGO_PKG_RUST_VERSION", "unknown")
 }
 
+fn skip_suffix(count: usize) -> String {
+    if count > 0 {
+        let mut s = String::from(", ");
+        s.push_str(&count.to_string());
+        s.push_str(" skipped");
+        s
+    } else {
+        String::new()
+    }
+}
+
 fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
     use owo_colors::OwoColorize;
 
@@ -160,16 +171,16 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
     let framework = match agent::test_runner::detect(&root) {
         Ok(f) => f,
         Err(e) => {
-            println!("  {} {}", "✗".red(), e);
+            println!("  {} {}", "x".red(), e);
             return Ok(ExitCode::from(1));
         }
     };
 
-    println!("  {} Detected: {}", "✓".green().bold(), framework.name.cyan());
+    println!("  {} Detected: {}", "+".green().bold(), framework.name.cyan());
     if let Some(ref cfg) = framework.config_file {
-        println!("  {} Config: {}", "→".dimmed(), cfg);
+        println!("  {} Config: {}", "->".dimmed(), cfg);
     }
-    println!("  {} Coverage cmd: {}", "→".dimmed(), framework.coverage_cmd.join(" ").cyan());
+    println!("  {} Coverage cmd: {}", "->".dimmed(), framework.coverage_cmd.join(" ").cyan());
 
     if args.detect_only {
         println!();
@@ -183,23 +194,63 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
     // 3. Print results.
     println!();
     if result.success {
-        println!("  {} Tests passed", "✓".green().bold());
+        println!("  {} All tests passed!", "+".green().bold());
     } else {
-        println!("  {} Tests FAILED", "✗".red().bold());
+        println!("  {} Tests FAILED", "x".red().bold());
     }
     if result.total_tests > 0 {
         println!(
-            "  {} passed, {} failed, {} skipped ({} total) in {}ms",
+            "  {} passed, {} failed, {} skipped ({} total) in {:.1}s",
             result.passed.to_string().green(),
             result.failed.to_string().red(),
             result.skipped.to_string().yellow(),
             result.total_tests,
-            result.duration_ms,
+            result.duration_ms as f64 / 1000.0,
         );
+    }
+
+    // Show per-file test results if available.
+    if !result.test_cases.is_empty() {
+        println!();
+        let mut by_file: std::collections::BTreeMap<Option<String>, Vec<&agent::test_runner::TestCaseResult>> = std::collections::BTreeMap::new();
+        for tc in &result.test_cases {
+            by_file.entry(tc.file.clone()).or_default().push(tc);
+        }
+        for (file, tests) in &by_file {
+            let fname = file.as_deref().unwrap_or("unknown");
+            let p = tests.iter().filter(|t| t.status == agent::test_runner::TestCaseStatus::Passed).count();
+            let f = tests.iter().filter(|t| t.status == agent::test_runner::TestCaseStatus::Failed).count();
+            let s = tests.iter().filter(|t| t.status == agent::test_runner::TestCaseStatus::Skipped).count();
+
+            if f > 0 {
+                println!("  {} {} ({} passed, {} failed{})", "FAIL".red().bold(), fname.cyan(), p.to_string().green(), f.to_string().red(), skip_suffix(s));
+            } else {
+                println!("  {} {} ({} passed{})", "PASS".green().bold(), fname.cyan(), p.to_string().green(), skip_suffix(s));
+            }
+
+            for tc in tests {
+                match tc.status {
+                    agent::test_runner::TestCaseStatus::Failed => {
+                        let d = tc.duration_ms.map(|ms| format!(" ({}ms)", ms)).unwrap_or_default();
+                        println!("    {} {}{}", "x".red(), tc.name.red(), d.dimmed());
+                    }
+                    agent::test_runner::TestCaseStatus::Skipped => {
+                        println!("    {} {}", "-".yellow(), tc.name.yellow());
+                    }
+                    agent::test_runner::TestCaseStatus::Passed => {
+                        if tests.len() <= 5 {
+                            let d = tc.duration_ms.map(|ms| format!(" ({}ms)", ms)).unwrap_or_default();
+                            println!("    {} {}{}", "+".green(), tc.name, d.dimmed());
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
     }
     if let Some(ref cov_file) = result.coverage_file {
         println!(
-            "  {} Coverage: {:.1}% → {}",
+            "  {} Coverage: {:.1}% -> {}",
             "📊".to_string().cyan(),
             result.coverage_percent,
             cov_file.display(),
@@ -211,7 +262,7 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
     // 4. If --fix, feed to AI agent.
     if args.fix {
         if result.coverage_file.is_none() {
-            println!("\n  {} Cannot fix — no coverage report available.", "✗".red());
+            println!("  {} Cannot fix -- no coverage report available.", "x".red());
             return Ok(ExitCode::from(1));
         }
 
@@ -229,7 +280,7 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
             }
             cfg.ai.api_key.clone()
         } else {
-            println!("\n  {} AI not configured. Run `lens setup` first.", "✗".red());
+            println!("  {} AI not configured. Run lens setup first.", "x".red());
             return Ok(ExitCode::from(1));
         };
 
@@ -239,8 +290,8 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
         let ai_config = agent::client::AiConfig { api_key, base_url, model };
         let lcov = result.coverage_file.as_ref().unwrap();
 
-        println!("\n  {} AI Agent starting...", "🤖".to_string().cyan());
-        println!("  {} Model: {}", "→".dimmed(), ai_config.model.yellow());
+        println!("  {} AI Agent starting...", "robot".to_string().cyan());
+        println!("  {} Model: {}", "->".dimmed(), ai_config.model.yellow());
 
         let rt = tokio::runtime::Runtime::new().context("creating runtime")?;
 
@@ -251,12 +302,12 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
                 )?;
                 println!(
                     "  {} Generated {} test files covering {} lines",
-                    "✓".green().bold(),
+                    "+".green().bold(),
                     fix_result.test_files_written.len(),
                     fix_result.lines_covered,
                 );
                 if !fix_result.test_files_written.is_empty() {
-                    println!("\n  {} Re-run tests to verify:", "→".bold());
+                    println!("  {} Re-run tests to verify:", "->".bold());
                     println!("    lens test .");
                 }
             }
