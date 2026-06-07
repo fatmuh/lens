@@ -98,8 +98,10 @@ pub struct ScanArgs {
     #[arg(long)]
     pub sonar_compat: bool,
 
-    /// Minimum block size for `--sonar-compat` mode (default: 100).
-    /// SonarQube's default is 100; lower values are more sensitive.
+    /// Minimum block size for `--sonar-compat` mode (default: 300).
+    /// SonarQube's effective default for typical TypeScript code.
+    /// Lower values (e.g. 100) are more sensitive, higher values (500+)
+    /// only flag the biggest duplicates.
     #[arg(long)]
     pub min_duplicate_lines: Option<usize>,
 
