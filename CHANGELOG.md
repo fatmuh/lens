@@ -29,6 +29,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   SonarQube's, typically reporting 5–20x lower percentages on the same
   codebase. It is best used as an order-of-magnitude approximation.
 
+### Changed
+- **`--normalize-identifiers` flag + `duplication.normalize_identifiers` config**:
+  In `sonar-compat` mode, identifiers (a-zA-Z0-9_ starting with letter/_)
+  are now replaced with the literal `@id` before per-line hashing. This
+  makes the algorithm invariant to variable, function, and class renames
+  and catches structurally-identical code that differs only by name. Off
+  by default to preserve exact-hash semantics; turn on with
+  `--normalize-identifiers` or `normalize_identifiers = true` in
+  `quality-gate.toml`.
+
 ## [0.1.0] — 2026-06-06
 
 ## [0.1.0] — 2026-06-06

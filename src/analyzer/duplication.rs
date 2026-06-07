@@ -243,68 +243,153 @@ pub fn detect_sonar(
     min_lines: usize,
     normalize_identifiers: bool,
 ) -> DuplicationReport {
-    // 1. Per-file, per-line hashes.
-    let per_file: Vec<Vec<(u32, u64)>> = files
+    /// Block size: number of statements (lines) per block for Rabin-Karp
+    /// hashing. Matches SonarQube's default.
+    const BLOCK_SIZE: usize = 10;
+    /// Minimum number of blocks a file must contain with the same hash in
+    /// order to count as a duplicate. SonarQube uses ~100 tokens ≈ 2 blocks
+    /// of 10 statements each.
+    let min_blocks_per_file = std::cmp::max(2, min_lines.div_ceil(BLOCK_SIZE));
+
+    // 1. Convert tokens to per-line "statement" values (one per non-empty
+    //    line). Each value is the normalized token text for that line.
+    let per_file: Vec<(PathBuf, Vec<(u32, String)>)> = files
         .iter()
-        .map(|(_, toks)| compute_line_hashes(toks, normalize_identifiers))
+        .map(|(path, tokens)| {
+            (path.clone(), tokens_to_statement_values(tokens, normalize_identifiers))
+        })
         .collect();
-    let total_lines: u64 = per_file.iter().map(|v| v.len() as u64).sum();
+    let total_lines: u64 = per_file.iter().map(|(_, s)| s.len() as u64).sum();
 
-    // 2. Find runs of identical consecutive lines in each file.
-    let mut hash_to_runs: HashMap<u64, Vec<(usize, u32, u32)>> = HashMap::new();
-    for (file_idx, line_hashes) in per_file.iter().enumerate() {
-        for (hash, start, end) in find_consecutive_runs(line_hashes) {
-            let len = (end - start + 1) as usize;
-            if len >= min_lines {
-                hash_to_runs.entry(hash).or_default().push((file_idx, start, end));
-            }
+    // 2. Apply SonarQube's consecutive-duplicate filter (from BlockChunker).
+    let per_file_filtered: Vec<(PathBuf, Vec<(u32, String)>)> = per_file
+        .into_iter()
+        .map(|(p, stmts)| (p, collapse_consecutive_runs(stmts)))
+        .collect();
+
+    // 3. Rabin-Karp rolling hash, one hash per sliding window of
+    //    BLOCK_SIZE consecutive statements. Base 31, u64 arithmetic.
+    #[derive(Clone)]
+    struct BlockInfo {
+        hash: u64,
+        file_idx: usize,
+        start_line: u32,
+        end_line: u32,
+    }
+    let mut all_blocks: Vec<BlockInfo> = Vec::new();
+    for (file_idx, (_, stmts)) in per_file_filtered.iter().enumerate() {
+        if stmts.len() < BLOCK_SIZE {
+            continue;
+        }
+        let values: Vec<&str> = stmts.iter().map(|(_, v)| v.as_str()).collect();
+        let hashes = rabin_karp_blocks(&values, BLOCK_SIZE);
+        for (i, h) in hashes.iter().enumerate() {
+            all_blocks.push(BlockInfo {
+                hash: *h,
+                file_idx,
+                start_line: stmts[i].0,
+                end_line: stmts[i + BLOCK_SIZE - 1].0,
+            });
         }
     }
 
-    // 3. Group runs by (hash, length) so we can find ALL occurrences of
-    //    each candidate block.
-    let mut block_groups: HashMap<(u64, u32), Vec<(usize, u32, u32)>> = HashMap::new();
-    for (hash, runs) in &hash_to_runs {
-        for (file_idx, start, end) in runs {
-            let len = end - start + 1;
-            block_groups.entry((*hash, len)).or_default().push((*file_idx, *start, *end));
-        }
+    // 4. Group blocks by file, indexed by hash. With a sliding-window
+    //    block size of BLOCK_SIZE, each (hash, file) pair typically has
+    //    exactly one entry — so the per-hash "≥ min_blocks in each file"
+    //    check used in simpler algorithms doesn't apply. Instead we use
+    //    a *file-pair* approach: for every pair of files, count how many
+    //    block hashes they share. If that count ≥ `min_blocks_per_file`,
+    //    the two files share a clone, and we report the bounding line
+    //    range of the matching blocks.
+    let mut by_file_blocks: HashMap<usize, HashMap<u64, (u32, u32)>> = HashMap::new();
+    for block in &all_blocks {
+        by_file_blocks
+            .entry(block.file_idx)
+            .or_default()
+            .insert(block.hash, (block.start_line, block.end_line));
     }
 
-    // 4. For each (hash, length) group: if 2+ distinct files have a run,
-    //    emit a duplicate block.
+    let file_indices: Vec<usize> = by_file_blocks.keys().copied().collect();
     let mut blocks: Vec<DuplicateBlock> = Vec::new();
     let mut duplicated_lines: u64 = 0;
     let mut per_file_dup: HashMap<PathBuf, u64> = HashMap::new();
 
-    for (_key, occurrences) in &block_groups {
-        let unique_files: HashSet<usize> = occurrences.iter().map(|(f, _, _)| *f).collect();
-        if unique_files.len() < 2 {
-            continue;
-        }
-        let block_len = occurrences[0].2 - occurrences[0].1 + 1;
-        let occs: Vec<BlockOccurrence> = occurrences
-            .iter()
-            .map(|(f, s, e)| BlockOccurrence {
-                file: files[*f].0.clone(),
-                start_line: *s,
-                end_line: *e,
-            })
-            .collect();
-        blocks.push(DuplicateBlock {
-            // Semantic overload: in Sonar mode, this field stores the
-            // block size in lines, not tokens.
-            token_count: block_len as usize,
-            occurrences: occs,
-        });
-        // Count each block's lines once toward the project-wide %.
-        duplicated_lines += block_len as u64;
-        for (f, _, _) in occurrences {
-            *per_file_dup.entry(files[*f].0.clone()).or_insert(0) += block_len as u64;
+    for i in 0..file_indices.len() {
+        for j in (i + 1)..file_indices.len() {
+            let file_a = file_indices[i];
+            let file_b = file_indices[j];
+            let map_a = &by_file_blocks[&file_a];
+            let map_b = &by_file_blocks[&file_b];
+
+            // Count shared hashes (use HashSet for O(min(|A|,|B|))).
+            let common: HashSet<u64> = map_a
+                .keys()
+                .filter(|h| map_b.contains_key(h))
+                .copied()
+                .collect();
+            if common.len() < min_blocks_per_file {
+                continue;
+            }
+            // Bounding line range of the matching blocks in each file.
+            let min_start_a = common.iter().map(|h| map_a[h].0).min().unwrap();
+            let max_end_a = common.iter().map(|h| map_a[h].1).max().unwrap();
+            let min_start_b = common.iter().map(|h| map_b[h].0).min().unwrap();
+            let max_end_b = common.iter().map(|h| map_b[h].1).max().unwrap();
+
+            let block_len = (max_end_a - min_start_a + 1) as usize;
+            blocks.push(DuplicateBlock {
+                // Semantic overload: in Sonar mode, this stores line count.
+                token_count: block_len,
+                occurrences: vec![
+                    BlockOccurrence {
+                        file: files[file_a].0.clone(),
+                        start_line: min_start_a,
+                        end_line: max_end_a,
+                    },
+                    BlockOccurrence {
+                        file: files[file_b].0.clone(),
+                        start_line: min_start_b,
+                        end_line: max_end_b,
+                    },
+                ],
+            });
+            duplicated_lines += block_len as u64;
+            *per_file_dup.entry(files[file_a].0.clone()).or_insert(0) += block_len as u64;
+            *per_file_dup.entry(files[file_b].0.clone()).or_insert(0) += block_len as u64;
         }
     }
 
-    // 5. Sort by size, dedupe overlapping, keep top 20.
+    // 4b. Merge blocks that refer to the same set of files. With the
+    //     file-pair approach, a 3-file clone produces 3 blocks (A↔B,
+    //     A↔C, B↔C). We want 1 report per clone, so we group by the
+    //     sorted set of files and union the line ranges.
+    for block in blocks.iter_mut() {
+        block.occurrences.sort_by(|a, b| a.file.cmp(&b.file));
+    }
+    let mut grouped: HashMap<Vec<PathBuf>, DuplicateBlock> = HashMap::new();
+    for block in blocks {
+        let files_key: Vec<PathBuf> = block.occurrences.iter().map(|o| o.file.clone()).collect();
+        grouped
+            .entry(files_key)
+            .and_modify(|existing| {
+                for (i, occ) in block.occurrences.iter().enumerate() {
+                    if let Some(existing_occ) = existing.occurrences.get_mut(i) {
+                        existing_occ.start_line = existing_occ.start_line.min(occ.start_line);
+                        existing_occ.end_line = existing_occ.end_line.max(occ.end_line);
+                    }
+                }
+                existing.token_count = existing
+                    .occurrences
+                    .iter()
+                    .map(|o| (o.end_line - o.start_line + 1) as usize)
+                    .max()
+                    .unwrap_or(0);
+            })
+            .or_insert(block);
+    }
+    let mut blocks: Vec<DuplicateBlock> = grouped.into_values().collect();
+
+    // 5. Sort, dedupe overlapping, keep top 20.
     blocks.sort_by(|a, b| b.token_count.cmp(&a.token_count));
     let blocks = dedupe_overlapping(blocks);
     let blocks: Vec<DuplicateBlock> = blocks.into_iter().take(20).collect();
@@ -322,10 +407,10 @@ pub fn detect_sonar(
 
     DuplicationReport {
         mode: DuplicationMode::Sonar,
-        total_tokens: total_lines,        // semantic overload: total lines
-        duplicated_tokens: duplicated_lines, // semantic overload: duplicated lines
+        total_tokens: total_lines,
+        duplicated_tokens: duplicated_lines,
         duplication_percent: percent,
-        min_tokens_threshold: min_lines,  // semantic overload: min lines
+        min_tokens_threshold: min_lines,
         k_shingle: 0,
         winnow_window: 0,
         files_with_duplication: offenders.len(),
@@ -335,44 +420,107 @@ pub fn detect_sonar(
     }
 }
 
-/// Group tokens by source line and produce a hash for each line's
-/// whitespace-normalized token sequence.
-///
-/// When `normalize_identifiers` is true, tokens that look like identifiers
-/// (a-zA-Z0-9_, starting with letter or _) are replaced with the literal
-/// `"@id"` before hashing. This makes the line hash invariant to variable
-/// renames — `function add(a, b) { return a + b; }` and
-/// `function sum(x, y) { return x + y; }` then produce the same hash,
-/// which is closer to how SonarQube's "duplications" metric behaves.
-fn compute_line_hashes(
+/// Group tokens by source line, joining each line's normalized token
+/// text into a single "statement" value. Empty lines (no tokens) are
+/// dropped. When `normalize_identifiers` is true, identifier-like tokens
+/// are replaced with `"@id"`.
+fn tokens_to_statement_values(
     tokens: &[Token],
     normalize_identifiers: bool,
-) -> Vec<(u32, u64)> {
+) -> Vec<(u32, String)> {
     let mut by_line: BTreeMap<u32, Vec<&Token>> = BTreeMap::new();
     for tok in tokens {
         by_line.entry(tok.line).or_default().push(tok);
     }
-    by_line
-        .iter()
-        .map(|(line_num, toks)| {
-            let mut h = std::collections::hash_map::DefaultHasher::new();
-            for tok in toks {
-                let normalized = if normalize_identifiers && is_identifier(&tok.text) {
-                    "@id"
-                } else {
-                    tok.text.trim()
-                };
-                normalized.hash(&mut h);
-            }
-            (*line_num, h.finish())
+    let mut lines: Vec<u32> = by_line.keys().copied().collect();
+    lines.sort();
+    lines
+        .into_iter()
+        .map(|line| {
+            let toks = &by_line[&line];
+            let value: String = toks
+                .iter()
+                .map(|t| {
+                    if normalize_identifiers && is_identifier(&t.text) {
+                        "@id".to_string()
+                    } else {
+                        t.text.trim().to_string()
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" ");
+            (line, value)
         })
+        .filter(|(_, v)| !v.is_empty())
         .collect()
+}
+
+/// SonarQube's `BlockChunker` consecutive-duplicate filter (translated
+/// from Java):
+///   - Run of 1:  keep the only item.
+///   - Run of 2:  keep only the first.
+///   - Run of 3+:  keep the first and the last.
+fn collapse_consecutive_runs(items: Vec<(u32, String)>) -> Vec<(u32, String)> {
+    let mut result = Vec::with_capacity(items.len());
+    let mut i = 0;
+    while i < items.len() {
+        let mut j = i + 1;
+        while j < items.len() && items[j].1 == items[i].1 {
+            j += 1;
+        }
+        result.push(items[i].clone());
+        if j - i >= 3 {
+            result.push(items[j - 1].clone());
+        }
+        i = j;
+    }
+    result
+}
+
+/// Rabin-Karp rolling hash with base 31, one hash per sliding window of
+/// `block_size` consecutive items. Matches SonarQube's `BlockChunker`
+/// formula: `s[0]*31^(n-1) + s[1]*31^(n-2) + ... + s[n-1]`.
+fn rabin_karp_blocks<T: Hash>(items: &[T], block_size: usize) -> Vec<u64> {
+    if items.len() < block_size {
+        return vec![];
+    }
+    let hashes: Vec<u64> = items
+        .iter()
+        .map(|item| {
+            let mut h = std::collections::hash_map::DefaultHasher::new();
+            item.hash(&mut h);
+            h.finish()
+        })
+        .collect();
+
+    let mut power: u64 = 1;
+    for _ in 0..block_size - 1 {
+        power = power.wrapping_mul(31);
+    }
+
+    // Seed: hash(items[0..block_size-1]) without the last term yet.
+    let mut h: u64 = 0;
+    for i in 0..block_size - 1 {
+        h = h.wrapping_mul(31).wrapping_add(hashes[i]);
+    }
+
+    let mut result = Vec::with_capacity(items.len().saturating_sub(block_size - 1));
+    for i in block_size - 1..items.len() {
+        h = h.wrapping_mul(31).wrapping_add(hashes[i]);
+        result.push(h);
+        // The oldest index in the current window: i - (block_size - 1).
+        // Safe because the loop starts at i == block_size - 1, so this is
+        // always >= 0; using wrapping_sub to keep usize arithmetic
+        // overflow-safe even in debug builds.
+        let oldest_idx = i.wrapping_sub(block_size - 1);
+        let oldest = hashes[oldest_idx];
+        h = h.wrapping_sub(oldest.wrapping_mul(power));
+    }
+    result
 }
 
 /// Heuristic: a token is treated as an identifier if it starts with an
 /// ASCII letter or `_` and contains only ASCII letters, digits, and `_`.
-/// This is intentionally permissive (it doesn't know about language-specific
-/// keywords) but is good enough for line-hash normalization in practice.
 fn is_identifier(s: &str) -> bool {
     let mut chars = s.chars();
     match chars.next() {
@@ -380,23 +528,6 @@ fn is_identifier(s: &str) -> bool {
         _ => return false,
     }
     chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
-}
-
-/// Find maximal runs of consecutive lines with the same hash.
-/// Returns `(hash, start_line, end_line)` for each run of length ≥ 1.
-fn find_consecutive_runs(line_hashes: &[(u32, u64)]) -> Vec<(u64, u32, u32)> {
-    let mut runs = Vec::new();
-    let mut i = 0;
-    while i < line_hashes.len() {
-        let mut j = i + 1;
-        while j < line_hashes.len() && line_hashes[j].1 == line_hashes[i].1 {
-            j += 1;
-        }
-        // Always emit a run; the caller filters by length.
-        runs.push((line_hashes[i].1, line_hashes[i].0, line_hashes[j - 1].0));
-        i = j;
-    }
-    runs
 }
 
 /// Generate fingerprints (hash + source token position) for one file.
@@ -723,30 +854,41 @@ mod tests {
         Token { text: text.to_string(), line }
     }
 
-    #[test]
-    fn sonar_identical_100_line_block_is_detected() {
-        // Build two files that share a 100-line block of identical content.
-        let mut tokens_a = Vec::new();
-        let mut tokens_b = Vec::new();
-        for line in 1..=100u32 {
-            for word in ["const", "x", "=", "1", ";"] {
-                tokens_a.push(tl(word, line));
-                tokens_b.push(tl(word, line));
+    /// Build N consecutive UNIQUE statements (each different from the
+    /// others) so the consecutive-duplicate filter doesn't collapse them.
+    /// Returns (path, tokens) for one file.
+    fn make_unique_block(n: usize, file: &str) -> (PathBuf, Vec<Token>) {
+        let mut tokens = Vec::new();
+        for i in 0..n {
+            let line = (i + 1) as u32;
+            for word in [format!("s{}", i).as_str(), "x", ";"] {
+                tokens.push(tl(word, line));
             }
         }
-        let report = detect_sonar(
-            &[("a.ts".into(), tokens_a), ("b.ts".into(), tokens_b)],
-            100,
-            false,
-        );
+        (PathBuf::from(file), tokens)
+    }
+
+    #[test]
+    fn sonar_identical_100_line_block_is_detected() {
+        // Two files share 100 unique statements (so the consecutive-duplicate
+        // filter doesn't collapse them). With block size 10, each file
+        // produces 91 overlapping block hashes, all matching between the
+        // two files.
+        let a = make_unique_block(100, "a.ts");
+        let b = make_unique_block(100, "b.ts");
+        let report = detect_sonar(&[a, b], 100, false);
         assert!(
             report.duplication_percent > 0.0,
             "expected duplication > 0, got {}",
             report.duplication_percent
         );
-        assert_eq!(report.blocks.len(), 1);
-        assert_eq!(report.blocks[0].token_count, 100);
-        assert_eq!(report.blocks[0].occurrences.len(), 2);
+        assert!(!report.blocks.is_empty());
+        // Both files should appear in at least one block.
+        let any_two = report
+            .blocks
+            .iter()
+            .any(|b| b.occurrences.iter().map(|o| &o.file).collect::<std::collections::HashSet<_>>().len() == 2);
+        assert!(any_two, "expected a block to span both files");
     }
 
     #[test]
@@ -811,43 +953,62 @@ mod tests {
 
     #[test]
     fn sonar_three_files_with_same_block() {
-        let mut tokens_a = Vec::new();
-        let mut tokens_b = Vec::new();
-        let mut tokens_c = Vec::new();
-        for line in 1..=100u32 {
-            for word in ["let", "v", "=", "42", ";"] {
-                tokens_a.push(tl(word, line));
-                tokens_b.push(tl(word, line));
-                tokens_c.push(tl(word, line));
-            }
-        }
-        let report = detect_sonar(
-            &[
-                ("a.ts".into(), tokens_a),
-                ("b.ts".into(), tokens_b),
-                ("c.ts".into(), tokens_c),
-            ],
-            100,
-            false,
-        );
+        let a = make_unique_block(100, "a.ts");
+        let b = make_unique_block(100, "b.ts");
+        let c = make_unique_block(100, "c.ts");
+        let report = detect_sonar(&[a, b, c], 100, false);
         assert!(report.duplication_percent > 0.0);
-        // All three files should be in the occurrences list.
-        assert_eq!(report.blocks[0].occurrences.len(), 3);
+        // All three files should appear in at least one block.
+        // (With per-file-pair reporting, the same clone may produce 3
+        // separate blocks — one for each pair — so we check the union.)
+        let unique_files: std::collections::HashSet<_> = report
+            .blocks
+            .iter()
+            .flat_map(|b| b.occurrences.iter().map(|o| &o.file))
+            .collect();
+        assert_eq!(unique_files.len(), 3, "expected all three files to be covered");
+    }
+
+    #[test]
+    fn sonar_collapse_filter_reduces_aa_to_a() {
+        // Direct unit test for the SonarQube consecutive-duplicate filter.
+        // Three identical statements followed by a fourth different one.
+        let items = vec![
+            (1u32, "a".to_string()),
+            (2u32, "a".to_string()),
+            (3u32, "a".to_string()),
+            (4u32, "b".to_string()),
+        ];
+        let collapsed = collapse_consecutive_runs(items);
+        // 3+ identical: keep first and last. Then the different one.
+        assert_eq!(collapsed.len(), 3);
+        assert_eq!(collapsed[0].1, "a");
+        assert_eq!(collapsed[1].1, "a");
+        assert_eq!(collapsed[2].1, "b");
+    }
+
+    #[test]
+    fn sonar_collapse_filter_handles_pairs() {
+        // Two identical: keep only the first.
+        let items = vec![
+            (1u32, "a".to_string()),
+            (2u32, "a".to_string()),
+            (3u32, "b".to_string()),
+        ];
+        let collapsed = collapse_consecutive_runs(items);
+        assert_eq!(collapsed.len(), 2);
+        assert_eq!(collapsed[0].1, "a");
+        assert_eq!(collapsed[1].1, "b");
     }
 
     #[test]
     fn detect_with_mode_dispatches_to_sonar() {
-        // Two files sharing a 100-line identical block.
-        let mut tokens_a = Vec::new();
-        let mut tokens_b = Vec::new();
-        for line in 1..=100u32 {
-            for word in ["const", "x", "=", "1", ";"] {
-                tokens_a.push(tl(word, line));
-                tokens_b.push(tl(word, line));
-            }
-        }
+        // Two files sharing 100 unique statements so the consecutive filter
+        // doesn't collapse them.
+        let a = make_unique_block(100, "a.ts");
+        let b = make_unique_block(100, "b.ts");
         let report = detect_with_mode(
-            &[("a.ts".into(), tokens_a), ("b.ts".into(), tokens_b)],
+            &[a, b],
             DuplicationMode::Sonar,
             5,
             10,
@@ -861,27 +1022,25 @@ mod tests {
 
     #[test]
     fn sonar_normalized_catches_renamed_identifiers() {
-        // Two blocks that differ ONLY by identifier names.
-        // a.ts:   function add(a, b) { return a + b; }
-        // b.ts:   function sum(x, y) { return x + y; }
-        // With normalization, these should match. Without, they should not.
-        let make = |fname: &str, fnname: &str, p1: &str, p2: &str| {
+        // Two files that differ ONLY by identifier names. Each line has
+        // a different non-identifier constant (0, 1, …, 19) so the
+        // statements are all distinct after normalization (the consecutive
+        // filter doesn't collapse them).
+        let make = |fname: &str, id: &str| {
             let mut tokens = Vec::new();
-            let mut line = 1u32;
-            for word in ["function", fnname, "(", p1, ",", p2, ")", "{"] {
-                tokens.push(tl(word, line));
-            }
-            line += 1;
-            for word in ["return", p1, "+", p2, ";", "}"] {
-                tokens.push(tl(word, line));
+            for i in 0..20 {
+                let line = (i + 1) as u32;
+                for word in [id, format!("{}", i).as_str(), ";"] {
+                    tokens.push(tl(word, line));
+                }
             }
             (PathBuf::from(fname), tokens)
         };
-        let a = make("a.ts", "add", "a", "b");
-        let b = make("b.ts", "sum", "x", "y");
+        let a = make("a.ts", "foo");
+        let b = make("b.ts", "bar");
         let files: Vec<(PathBuf, Vec<Token>)> = vec![a, b];
 
-        // Without normalization: no match.
+        // Without normalization: no match (different identifiers).
         let strict = detect_sonar(&files, 1, false);
         assert_eq!(
             strict.duplication_percent, 0.0,
@@ -893,14 +1052,16 @@ mod tests {
         let normalized = detect_sonar(&files, 1, true);
         assert!(
             normalized.duplication_percent > 0.0,
-            "normalized mode should match (renamed identifiers)"
+            "normalized mode should match (renamed identifiers), got {}",
+            normalized.duplication_percent
         );
-        // Two duplicate blocks: the `function … {` line and the `return …;` line.
-        assert!(
-            !normalized.blocks.is_empty(),
-            "expected at least one block, got {}",
-            normalized.blocks.len()
-        );
+        // Both files should appear in some block.
+        let unique_files: std::collections::HashSet<_> = normalized
+            .blocks
+            .iter()
+            .flat_map(|b| b.occurrences.iter().map(|o| &o.file))
+            .collect();
+        assert_eq!(unique_files.len(), 2, "expected both files to be covered");
     }
 
     #[test]

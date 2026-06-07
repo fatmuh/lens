@@ -368,7 +368,7 @@ fn report_terminal(
     println!();
     println!(
         "{}",
-        "  ℹ Phase 1+3+5: TS-only metrics, block-level duplication, SonarQube-compatible mode, and coverage parsing (LCOV/Cobertura/JaCoCo)."
+        "  ℹ Phase 1+3+5+: TS-only metrics, block-level duplication, SonarQube-compatible mode (with identifier normalization), and coverage parsing (LCOV/Cobertura/JaCoCo)."
             .dimmed()
     );
     println!();
