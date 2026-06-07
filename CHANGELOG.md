@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Rule engine (Phase 2)** — **49 built-in TypeScript/JavaScript rules**
+- **Rule engine (Phase 2)** — **65 built-in TypeScript/JavaScript rules**
   that produce actionable `Issue`s with file:line location and a one-line
   fix suggestion. Each rule is a separate file in `src/rules/builtin/`,
   implementing the [`Rule`](src/rules/mod.rs) trait:
@@ -76,6 +76,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `no-useless-rename` (minor) — `import { x as x }`
     - `no-new-buffer` (major) — `new Buffer()` is deprecated
 
+  **Added 16 more rules** (security + correctness + naming + style):
+
+  Security:
+    - `no-with` (critical) — `with` statement (forbidden in strict mode)
+    - `no-proto` (major) — `__proto__` (use `Object.getPrototypeOf`)
+    - `no-new-symbol` (major) — `new Symbol()` throws (use `Symbol()`)
+    - `no-control-regex` (major) — ASCII control chars in regex patterns
+
+  Correctness:
+    - `no-bitwise` (major) — `&`/`|`/`^`/`~` in regular code
+    - `no-extra-bind` (minor) — unnecessary `.bind(this)`
+    - `no-extra-boolean-cast` (minor) — `!!x` or `Boolean(x)` on already-boolean
+    - `no-misused-new` (major) — `new` on an interface (use a class)
+    - `no-sparse-arrays` (major) — `[1, , 3]` (use `undefined`)
+    - `prefer-promise-reject-errors` (major) — `Promise.reject("str")` (use Error)
+    - `no-empty-interface` (major) — `interface Foo {}` (use `type`)
+
+  Naming:
+    - `camelcase` (minor) — non-camelCase vars (allow `UPPER_CASE`)
+    - `no-underscore-dangle` (minor) — trailing `_` in names
+
+  Style:
+    - `prefer-spread` (minor) — `[].concat(a, b)` → `[...a, ...b]`
+    - `quote-props` (minor) — object keys with special chars
+    - `no-warning-comments` (info) — `TODO`/`FIXME` without owner
+
   - **Output**: issues shown in terminal (severity glyphs + counts by
     severity + top violated rules + top 10 issues), in JSON output
     (`issues[]` + `summary.issues_by_severity`), and in SARIF
@@ -86,9 +112,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **`lens rules`** subcommand: lists all built-in rules with id,
     name, severity, languages, and (with `-v`) description. Supports
     `--language` filter and `--format json`.
-- **Rule tests**: 49 new unit tests in `src/rules/rule_tests.rs`,
-  one per rule (plus registry sanity checks). 117/117 total tests
-  passing (104 unit + 13 integration).
+- **Rule tests**: 65 new unit tests in `src/rules/rule_tests.rs`,
+  one per rule (plus registry sanity checks). 145/145 total tests
+  passing (132 unit + 13 integration).
 
 ## [0.1.1] — 2026-06-07
 

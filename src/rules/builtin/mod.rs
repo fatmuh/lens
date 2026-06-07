@@ -2,19 +2,27 @@
 
 use crate::rules::Rule;
 
+pub mod camelcase;
+pub mod consistent_type_imports;
+pub mod default_case;
 pub mod max_function_complexity;
 pub mod max_function_lines;
 pub mod max_params;
 pub mod no_async_promise_executor;
 pub mod no_await_in_loop;
+pub mod no_bitwise;
 pub mod no_console;
+pub mod no_control_regex;
 pub mod no_duplicate_imports;
 pub mod no_dupe_keys;
 pub mod no_else_return;
 pub mod no_empty_function;
+pub mod no_empty_interface;
 pub mod no_eqeqeq;
 pub mod no_eval;
 pub mod no_explicit_any;
+pub mod no_extra_bind;
+pub mod no_extra_boolean_cast;
 pub mod no_fallthrough;
 pub mod no_html_link;
 pub mod no_implicit_any;
@@ -22,35 +30,43 @@ pub mod no_implied_eval;
 pub mod no_import_assign;
 pub mod no_lonely_if;
 pub mod no_magic_numbers;
+pub mod no_misused_new;
 pub mod no_negated_condition;
 pub mod no_nested_ternary;
 pub mod no_new_buffer;
 pub mod no_new_func;
+pub mod no_new_symbol;
 pub mod no_non_null_assertion;
 pub mod no_param_reassign;
 pub mod no_promise_all_in_loop;
+pub mod no_proto;
 pub mod no_prototype_builtins;
 pub mod no_redeclare;
 pub mod no_return_await;
 pub mod no_script_url;
 pub mod no_self_compare;
+pub mod no_sparse_arrays;
 pub mod no_throw_literal;
 pub mod no_unneeded_ternary;
 pub mod no_unreachable;
+pub mod no_underscore_dangle;
 pub mod no_unsafe_finally;
 pub mod no_unused_vars;
 pub mod no_useless_concat;
 pub mod no_useless_rename;
 pub mod no_useless_return;
 pub mod no_var;
+pub mod no_warning_comments;
+pub mod no_with;
 pub mod prefer_arrow_callback;
 pub mod prefer_const;
 pub mod prefer_nullish_coalescing;
 pub mod prefer_optional_chain;
+pub mod prefer_promise_reject_errors;
+pub mod prefer_spread;
 pub mod prefer_template;
+pub mod quote_props;
 pub mod require_await;
-pub mod consistent_type_imports;
-pub mod default_case;
 
 /// All built-in rules, in the order they should be listed in `lens rules`.
 pub fn all_rules() -> Vec<Box<dyn Rule>> {
@@ -62,6 +78,10 @@ pub fn all_rules() -> Vec<Box<dyn Rule>> {
         Box::new(no_script_url::NoScriptUrl),
         Box::new(no_html_link::NoHtmlLink),
         Box::new(no_prototype_builtins::NoPrototypeBuiltins),
+        Box::new(no_with::NoWith),
+        Box::new(no_proto::NoProto),
+        Box::new(no_new_symbol::NoNewSymbol),
+        Box::new(no_control_regex::NoControlRegex),
         // Correctness
         Box::new(no_async_promise_executor::NoAsyncPromiseExecutor),
         Box::new(no_unsafe_finally::NoUnsafeFinally),
@@ -69,6 +89,12 @@ pub fn all_rules() -> Vec<Box<dyn Rule>> {
         Box::new(no_unreachable::NoUnreachable),
         Box::new(no_dupe_keys::NoDupeKeys),
         Box::new(no_redeclare::NoRedeclare),
+        Box::new(no_extra_bind::NoExtraBind),
+        Box::new(no_extra_boolean_cast::NoExtraBooleanCast),
+        Box::new(no_misused_new::NoMisusedNew),
+        Box::new(no_sparse_arrays::NoSparseArrays),
+        Box::new(prefer_promise_reject_errors::PreferPromiseRejectErrors),
+        Box::new(no_empty_interface::NoEmptyInterface),
         // Type safety
         Box::new(no_explicit_any::NoExplicitAny),
         Box::new(no_implicit_any::NoImplicitAny),
@@ -95,6 +121,7 @@ pub fn all_rules() -> Vec<Box<dyn Rule>> {
         Box::new(prefer_const::PreferConst),
         Box::new(prefer_template::PreferTemplate),
         Box::new(prefer_arrow_callback::PreferArrowCallback),
+        Box::new(prefer_spread::PreferSpread),
         Box::new(no_throw_literal::NoThrowLiteral),
         Box::new(no_empty_function::NoEmptyFunction),
         Box::new(no_useless_concat::NoUselessConcat),
@@ -106,6 +133,10 @@ pub fn all_rules() -> Vec<Box<dyn Rule>> {
         Box::new(no_unneeded_ternary::NoUnneededTernary),
         Box::new(no_else_return::NoElseReturn),
         Box::new(no_unused_vars::NoUnusedVars),
+        Box::new(camelcase::Camelcase),
+        Box::new(no_underscore_dangle::NoUnderscoreDangle),
+        Box::new(quote_props::QuoteProps),
+        Box::new(no_warning_comments::NoWarningComments),
         // Tooling
         Box::new(no_magic_numbers::NoMagicNumbers),
         Box::new(no_console::NoConsole),
