@@ -46,6 +46,14 @@ pub enum Command {
     /// List all available rules.
     Rules(RulesArgs),
 
+    /// AI-powered auto-fix: generate tests for uncovered lines and refactor duplicates.
+    #[command(visible_alias = "f")]
+    Fix(FixArgs),
+
+    /// Watch for file changes and auto-fix with AI.
+    #[command(visible_alias = "w")]
+    Watch(WatchArgs),
+
     /// Print version information.
     Version,
 }
@@ -208,4 +216,66 @@ impl Format {
             Format::Sarif => "sarif",
         }
     }
+}
+
+
+#[derive(Debug, Args)]
+pub struct FixArgs {
+    /// Directory to fix (default: current dir).
+    #[arg(value_name = "PATH", default_value = ".")]
+    pub path: PathBuf,
+
+    /// Agent mode: what to fix.
+    #[arg(long, short = 'm', value_enum, default_value_t = AgentMode::All)]
+    pub mode: AgentMode,
+
+    /// Path to LCOV coverage report (required for coverage agent).
+    #[arg(long, value_name = "PATH")]
+    pub coverage: Option<PathBuf>,
+
+    /// Maximum number of files/blocks to process per run.
+    #[arg(long, default_value_t = 5)]
+    pub max_files: usize,
+
+    /// OpenAI-compatible API base URL.
+    #[arg(long, env = "LENS_AI_BASE_URL", default_value = "https://api.openai.com/v1")]
+    pub ai_base_url: String,
+
+    /// AI model to use.
+    #[arg(long, env = "LENS_AI_MODEL", default_value = "gpt-4o")]
+    pub ai_model: String,
+}
+
+#[derive(Debug, Args)]
+pub struct WatchArgs {
+    /// Directory to watch (default: current dir).
+    #[arg(value_name = "PATH", default_value = ".")]
+    pub path: PathBuf,
+
+    /// Agent mode: what to fix on change.
+    #[arg(long, short = 'm', value_enum, default_value_t = AgentMode::All)]
+    pub mode: AgentMode,
+
+    /// Path to LCOV coverage report (required for coverage agent).
+    #[arg(long, value_name = "PATH")]
+    pub coverage: Option<PathBuf>,
+
+    /// Debounce interval in milliseconds.
+    #[arg(long, default_value_t = 2000)]
+    pub debounce_ms: u64,
+
+    /// OpenAI-compatible API base URL.
+    #[arg(long, env = "LENS_AI_BASE_URL", default_value = "https://api.openai.com/v1")]
+    pub ai_base_url: String,
+
+    /// AI model to use.
+    #[arg(long, env = "LENS_AI_MODEL", default_value = "gpt-4o")]
+    pub ai_model: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum AgentMode {
+    Coverage,
+    Dedup,
+    All,
 }
