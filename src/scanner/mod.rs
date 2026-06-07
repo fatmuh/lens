@@ -136,6 +136,11 @@ pub fn run(config_arg: Option<PathBuf>, args: ScanArgs) -> Result<ExitCode> {
     coverage_report.it_lines = it_report.total_lines;
     coverage_report.it_covered_lines = it_report.covered_lines;
     coverage_report.it_coverage_percent = it_report.coverage_percent;
+    // Compute new-code coverage if state exists.
+    let snap = state::Snapshot::load(&scan_root);
+    if !snap.files.is_empty() {
+        coverage_report.compute_new_coverage(&snap);
+    }
 
     let duration = started.elapsed();
     let duration_ms = duration.as_millis() as u64;
@@ -205,7 +210,26 @@ fn save_state_snapshot(scan_root: &Path, analysis: &ProjectAnalysis) {
         .map(|d| d.as_secs() as i64)
         .unwrap_or(0);
     for f in &analysis.files {
-        let rel = path_to_string(&f.path);
+        // Use a relative path so it matches what coverage tools (LCOV etc.)
+        // report. The `\\?\` Windows UNC prefix must be stripped first.
+        let normalized = util::path::normalize(&f.path);
+        let s = normalized.to_string_lossy().to_string();
+        // Manual prefix strip (Path::strip_prefix is case-sensitive and
+        // brittle on Windows). Use a case-insensitive suffix match.
+        let scan_str = util::path::normalize(scan_root).to_string_lossy().to_string();
+        let rel = if s.len() > scan_str.len()
+            && s[..scan_str.len()].eq_ignore_ascii_case(&scan_str)
+        {
+            let mut rest = &s[scan_str.len()..];
+            // Strip leading separator.
+            while rest.starts_with('\\') || rest.starts_with('/') {
+                rest = &rest[1..];
+            }
+            rest.to_string()
+        } else {
+            s.clone()
+        };
+        let rel = rel.replace('\\', "/");
         let hash = std::fs::read(&f.path)
             .ok()
             .and_then(|bytes| {
@@ -734,6 +758,22 @@ fn print_coverage_summary(c: &CoverageReport) {
         "  {} of {} executable lines covered across {} file(s) [format: {}]",
         colored, c.total_lines, c.file_count, c.format
     );
+    if c.new_total_lines > 0 {
+        let nc = if c.new_coverage_percent >= 80.0 { "green" }
+                 else if c.new_coverage_percent >= 50.0 { "yellow" }
+                 else { "red" };
+        let nc_str = format!("{:.2}%", c.new_coverage_percent);
+        let nc_colored = match nc {
+            "green" => nc_str.green().to_string(),
+            "yellow" => nc_str.yellow().to_string(),
+            _ => nc_str.red().to_string(),
+        };
+        println!(
+            "  New code: {} of {} lines covered ({})",
+            nc_colored, c.new_total_lines,
+            format!("{}/{}", c.new_covered_lines, c.new_total_lines).dimmed()
+        );
+    }
     let mut low: Vec<&crate::coverage::FileCoverage> = c
         .files
         .iter()

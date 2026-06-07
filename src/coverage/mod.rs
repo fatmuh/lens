@@ -92,6 +92,28 @@ impl CoverageReport {
         self.recompute_totals();
     }
 
+    /// Compute new-code coverage: for each file in `self`, if the file
+    /// is added or changed vs `snapshot`, add its lines to the new-code
+    /// totals. Files unchanged since last scan are NOT counted.
+    pub fn compute_new_coverage(&mut self, snapshot: &crate::state::Snapshot) {
+        let mut new_total: u64 = 0;
+        let mut new_covered: u64 = 0;
+        for f in &self.files {
+            let rel = f.path.to_string_lossy().to_string();
+            let hash = crate::state::Snapshot::hash_file(&f.path).unwrap_or_default();
+            let status = snapshot.classify_file(&rel, &hash);
+            if matches!(status, crate::state::FileStatus::Added | crate::state::FileStatus::Changed) {
+                new_total += f.total_lines;
+                new_covered += f.covered_lines;
+            }
+        }
+        self.new_total_lines = new_total;
+        self.new_covered_lines = new_covered;
+        self.new_coverage_percent = if new_total > 0 {
+            (new_covered as f64 / new_total as f64) * 100.0
+        } else { 0.0 };
+    }
+
     pub fn ut_total_lines(&self) -> u64 { self.ut_lines }
     pub fn it_total_lines(&self) -> u64 { self.it_lines }
     pub fn recompute_totals(&mut self) {
@@ -179,6 +201,59 @@ pub fn parse_with_categories(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn new_coverage_only_counts_new_files() {
+        // Create two files: one already in state (unchanged), one new.
+        let dir = std::env::temp_dir().join("lens-newcov-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let old_file = dir.join("old.ts");
+        let new_file = dir.join("new.ts");
+        std::fs::write(&old_file, "x").unwrap();
+        std::fs::write(&new_file, "y").unwrap();
+        let old_hash = crate::state::Snapshot::hash_file(&old_file).unwrap();
+        // Use the file's full path as the snapshot key (matches what
+        // `f.path.to_string_lossy()` produces).
+        let old_key = old_file.to_string_lossy().to_string();
+        let mut snap = crate::state::Snapshot::default();
+        snap.files.insert(old_key, crate::state::FileSnapshot {
+            hash: old_hash,
+            issues: vec![],
+        });
+        // Build a CoverageReport with both files, 4 lines each.
+        let mut report = CoverageReport {
+            format: "lcov".into(),
+            total_lines: 8,
+            covered_lines: 5,
+            coverage_percent: 62.5,
+            file_count: 2,
+            files: vec![
+                FileCoverage {
+                    path: old_file.clone(),
+                    total_lines: 4,
+                    covered_lines: 4,  // 100% covered
+                    coverage_percent: 100.0,
+                    uncovered_lines: vec![],
+                },
+                FileCoverage {
+                    path: new_file.clone(),
+                    total_lines: 4,
+                    covered_lines: 1,  // 25% covered
+                    coverage_percent: 25.0,
+                    uncovered_lines: vec![2, 3, 4],
+                },
+            ],
+            ut_lines: 0, ut_covered_lines: 0, ut_coverage_percent: 0.0,
+            it_lines: 0, it_covered_lines: 0, it_coverage_percent: 0.0,
+            new_total_lines: 0, new_covered_lines: 0, new_coverage_percent: 0.0,
+        };
+        report.compute_new_coverage(&snap);
+        // Only the new file should be counted (4 lines, 1 covered = 25%).
+        assert_eq!(report.new_total_lines, 4);
+        assert_eq!(report.new_covered_lines, 1);
+        assert!((report.new_coverage_percent - 25.0).abs() < 0.01);
+        std::fs::remove_dir_all(&dir).ok();
+    }
 
     #[test]
     fn merge_sums_matching_files() {
