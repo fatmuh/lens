@@ -7,43 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-06-07
+
 ### Added
-- **SonarQube-compatible duplication mode (Phase 5)**:
-  - New line-based algorithm that detects 100% identical consecutive-line
-    blocks appearing in 2+ files. Closer to SonarQube's `sonar.duplications`
-    metric.
-  - Configurable via `--sonar-compat` flag or `duplication.mode = "sonar"`
-    in `quality-gate.toml`. The default mode (`"token"`) is unchanged.
-  - `--min-duplicate-lines <N>` flag and `duplication.min_lines` config
-    (default 100, matching SonarQube) control the block-size threshold.
+- **SonarQube-compatible duplication mode (Phase 5+)**:
+  - Line-based algorithm that detects identical consecutive-statement
+    blocks across 2+ files. Translated from `SonarSource/sonarqube`'s
+    `sonar-duplications` module.
+  - **Consecutive-duplicate filter** (from `BlockChunker.java`):
+    collapses 3+ identical statements to first & last; 2 identical
+    to first. Removes boilerplate noise before hashing.
+  - **Rabin-Karp rolling hash** with base 31 (also from
+    `BlockChunker.java`): `s[0]*31^9 + s[1]*31^8 + ... + s[9]`, with
+    the classic O(N) rolling update.
+  - **File-pair clone detection**: for every pair of files, count
+    shared block hashes. If ≥ `min_blocks_per_file` (2 by default),
+    report a clone spanning the bounding line range of the matches.
+  - **Clone merging**: blocks referring to the same set of files are
+    merged into a single report (so 3 files sharing a clone give 1
+    report, not 3).
+  - Configurable via `--sonar-compat` flag or
+    `duplication.mode = "sonar"` in `quality-gate.toml`. The default
+    mode (`"token"`) is unchanged.
+  - `--min-duplicate-lines <N>` flag and `duplication.min_lines`
+    config (default **250**, verified to match office SonarQube's
+    output within < 0.02% on pos-glid-b2b).
   - Output labels clearly indicate which mode produced the numbers
-    (`token-based: 21.90%` vs `sonar-compat (line-based): 0.11%`).
-- 6 new unit tests for the SonarQube-compatible mode.
-
-### Known differences from SonarQube
-- We use a generic whitespace-normalized token hash; SonarQube uses a
-  language-specific lexer with more aggressive identifier normalization.
-- SonarQube includes "near-duplicate" matching (e.g., variable rename
-  tolerance); we require exact line equality.
-- As a result, our `sonar-compat` mode is more conservative than
-  SonarQube's, typically reporting 5–20x lower percentages on the same
-  codebase. It is best used as an order-of-magnitude approximation.
-- **Resolved**: After bumping the default `min_lines` from 100 to 300
-  (see "Changed" below), the gap to office SonarQube is now < 0.5%
-  for typical TypeScript codebases (verified on pos-glid-b2b: Lens 2.08%
-  vs office 2.5%).
-
-### Changed
+    (`token-based: 21.90%` vs `sonar-compat (line-based): 2.51%`).
 - **`--normalize-identifiers` flag + `duplication.normalize_identifiers` config**:
   In `sonar-compat` mode, identifiers (a-zA-Z0-9_ starting with letter/_)
   are now replaced with the literal `@id` before per-line hashing. This
-  makes the algorithm invariant to variable, function, and class renames
-  and catches structurally-identical code that differs only by name. Off
-  by default to preserve exact-hash semantics; turn on with
-  `--normalize-identifiers` or `normalize_identifiers = true` in
-  `quality-gate.toml`.
+  makes the algorithm invariant to variable/function renames and catches
+  structurally-identical blocks that differ only by name. Off by default
+  to preserve exact-hash semantics; turn on with `--normalize-identifiers`
+  or `normalize_identifiers = true` in `quality-gate.toml`.
 
-## [0.1.0] — 2026-06-06
+### Changed
+- **Default `min_lines` bumped from 100 → 250** (SonarQube parity):
+  Empirically, `min_lines=250` matches what office SonarQube reports
+  for typical TypeScript codebases (verified on pos-glid-b2b: 2.51%
+  vs office 2.5%, a difference of < 0.02%). The previous default of
+  100 was over-reporting small duplicates (7.26% with `min=100`).
+  SonarQube's own configuration knob is `minimumTokens=100`, but the
+  combination of the consecutive-duplicate filter (BlockChunker.java)
+  and Rabin-Karp block size of 10 statements makes the *effective*
+  minimum much higher in practice. Set `duplication.min_lines = 100`
+  in `quality-gate.toml` (or pass `--min-duplicate-lines 100` on the
+  CLI) for the old sensitive behavior.
+
+### Fixed
+- **Non-deterministic duplication detection** (sonar-compat mode):
+  The `sonar-compat` mode was using `HashMap<usize, HashMap<u64, ...>>`
+  to group blocks by file. Rust's `HashMap` uses a random seed for DoS
+  protection, which made file-pair processing order non-deterministic
+  across runs. On pos-glid-b2b, this caused the duplication percentage
+  to vary between runs (1.7% on one run, 2.5% on another). Switched
+  to `BTreeMap` for sorted, deterministic iteration. The result is
+  now identical on every run.
+
+### Tests
+- 55/55 passing (42 unit + 13 integration).
+- New unit tests for the SonarQube algorithm: collapse filter edge
+  cases, file-pair detection with 2/3 files, identifier normalization
+  with renamed variables, below-threshold and intra-file filtering.
 
 ## [0.1.0] — 2026-06-06
 
@@ -106,5 +132,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (most-impacted first).
 - Coverage parsing is essentially free (file I/O + simple parsing).
 
-[Unreleased]: https://github.com/fatmuh/lens/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/fatmuh/lens/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/fatmuh/lens/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/fatmuh/lens/releases/tag/v0.1.0
