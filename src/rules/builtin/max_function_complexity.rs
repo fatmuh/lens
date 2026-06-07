@@ -1,5 +1,6 @@
 //! `max-function-complexity` — flags functions whose cognitive complexity
-//! exceeds a threshold (default 15, matching SonarJS S3776).
+//! exceeds a threshold (default 15, matching SonarJS S3776). Threshold
+//! comes from `[rules.max_function_complexity]` in quality-gate.toml.
 
 use tree_sitter::Node;
 
@@ -9,16 +10,23 @@ use crate::analyzer::parser::{visit_descendants, with_parser};
 use crate::rules::{Issue, Rule, Severity};
 use crate::scanner::language::Language;
 
-pub struct MaxFunctionComplexity;
+pub struct MaxFunctionComplexity {
+    pub threshold: u32,
+}
 
-/// SonarJS S3776 default threshold.
-const DEFAULT_THRESHOLD: u32 = 15;
+impl Default for MaxFunctionComplexity {
+    fn default() -> Self { Self { threshold: 15 } }
+}
+
+impl MaxFunctionComplexity {
+    pub fn with_threshold(threshold: u32) -> Self { Self { threshold } }
+}
 
 impl Rule for MaxFunctionComplexity {
     fn id(&self) -> &'static str { "max-function-complexity" }
     fn name(&self) -> &'static str { "Function too complex" }
     fn description(&self) -> &'static str {
-        "Cognitive complexity > 15 makes functions hard to understand. Refactor into smaller pieces."
+        "Cognitive complexity > threshold makes functions hard to understand. Refactor into smaller pieces."
     }
     fn default_severity(&self) -> Severity { Severity::Major }
     fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
@@ -34,14 +42,14 @@ impl Rule for MaxFunctionComplexity {
                     .map(String::from);
                 let cc_name = name.as_deref();
                 let result = cognitive_complexity(node, source, cc_name);
-                if result.cc > DEFAULT_THRESHOLD {
+                if result.cc > self.threshold {
                     let func_name = name.as_deref().unwrap_or("<anonymous>");
                     issues.push(Issue {
                         rule_id: "max-function-complexity".into(),
                         severity: Severity::Major,
                         message: format!(
                             "Function `{}` has cognitive complexity {} (max {}).",
-                            func_name, result.cc, DEFAULT_THRESHOLD
+                            func_name, result.cc, self.threshold
                         ),
                         file: file.path.clone(),
                         start_line: result.start_line,

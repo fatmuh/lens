@@ -63,6 +63,15 @@ impl Default for AnalyzeConfig {
     }
 }
 
+impl AnalyzeConfig {
+    /// Create a config with per-rule thresholds from `quality-gate.toml`.
+    pub fn with_rules_config(rules_cfg: &crate::config::RulesConfig) -> Self {
+        let mut s = Self::default();
+        s.rules = RuleRegistry::with_config(rules_cfg);
+        s
+    }
+}
+
 /// Per-file analysis result.
 #[derive(Debug, Clone)]
 pub struct FileAnalysis {

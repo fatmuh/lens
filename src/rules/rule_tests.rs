@@ -207,7 +207,7 @@ mod tests {
     // -----------------------------------------------------------------
     #[test]
     fn max_params_flags_too_many() {
-        let r = MaxParams;
+        let r = MaxParams::default();
         let (f, s) = ts_file("function f(a: number, b: number, c: number, d: number, e: number, f: number, g: number) {}");
         let issues = r.check(&f, &s);
         assert_eq!(issues.len(), 1);
@@ -229,7 +229,7 @@ mod tests {
     // -----------------------------------------------------------------
     #[test]
     fn no_magic_numbers_flags_non_allowed() {
-        let r = NoMagicNumbers;
+        let r = NoMagicNumbers::default();
         let (f, s) = ts_file("console.log(42);");
         let issues = r.check(&f, &s);
         assert_eq!(issues.len(), 1, "got {} issues", issues.len());
@@ -238,7 +238,7 @@ mod tests {
     #[test]
     fn no_magic_numbers_allows_named_const() {
         // const x = 42 — the 42 is already named via `x`.
-        let r = NoMagicNumbers;
+        let r = NoMagicNumbers::default();
         let (f, s) = ts_file("const x = 42;");
         let issues = r.check(&f, &s);
         assert!(issues.is_empty());
@@ -246,7 +246,7 @@ mod tests {
 
     #[test]
     fn no_magic_numbers_allows_common() {
-        let r = NoMagicNumbers;
+        let r = NoMagicNumbers::default();
         let (f, s) = ts_file("if (x > 0) { return 1; }");
         let issues = r.check(&f, &s);
         assert!(issues.is_empty());

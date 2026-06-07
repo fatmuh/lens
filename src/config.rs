@@ -21,6 +21,7 @@ pub struct Config {
     pub coverage: CoverageConfig,
     pub issues: IssuesConfig,
     pub rules: RulesConfig,
+    pub significant_code: SignificantCodeConfig,
     pub output: OutputConfig,
     pub html: HtmlConfig,
     pub watch: WatchConfig,
@@ -162,10 +163,160 @@ impl Default for IssuesConfig {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct RulesConfig {
+    /// Rule IDs to disable (e.g. `["no-magic-numbers", "no-console"]`).
     pub disabled: Vec<String>,
+    /// `max-function-lines` threshold (default 50).
+    pub max_function_lines: u32,
+    /// `max-function-complexity` cognitive complexity threshold (default 15).
+    pub max_function_complexity: u32,
+    /// `max-params` threshold (default 5).
+    pub max_params: u32,
+    /// `no-magic-numbers` minimum |value| to flag (default 3; numbers
+    /// with absolute value below this are ignored, in addition to the
+    /// built-in allowed list -1, 0, 1, 2, 10, 100, 1000).
+    pub no_magic_numbers_min: u32,
+    /// Reserved for future `max-nested-depth` rule.
+    pub max_nested_depth: u32,
+}
+
+impl Default for RulesConfig {
+    fn default() -> Self {
+        Self {
+            disabled: Vec::new(),
+            max_function_lines: 50,
+            max_function_complexity: 15,
+            max_params: 5,
+            no_magic_numbers_min: 3,
+            max_nested_depth: 4,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SignificantCodeConfig {
+    /// Glob patterns (relative to root) of files considered "significant"
+    /// production code. Issues in other files (tests, generated, etc.)
+    /// are still reported but excluded from the "significant" count and
+    /// quality-gate evaluation.
+    pub patterns: Vec<String>,
+    /// Common test file patterns. Issues here are excluded by default.
+    pub test_patterns: Vec<String>,
+    /// Generated-code patterns. Issues here are excluded.
+    pub generated_patterns: Vec<String>,
+}
+
+impl Default for SignificantCodeConfig {
+    fn default() -> Self {
+        Self {
+            patterns: Vec::new(),
+            test_patterns: vec![
+                "**/*.test.ts".into(),
+                "**/*.test.tsx".into(),
+                "**/*.test.js".into(),
+                "**/*.spec.ts".into(),
+                "**/*.spec.tsx".into(),
+                "**/*.spec.js".into(),
+                "**/__tests__/**".into(),
+                "**/__mocks__/**".into(),
+            ],
+            generated_patterns: vec![
+                "**/*.d.ts".into(),
+                "**/*.generated.ts".into(),
+                "**/generated/**".into(),
+                "**/dist/**".into(),
+                "**/build/**".into(),
+            ],
+        }
+    }
+}
+
+impl Clone for SignificantCodeConfig {
+    fn clone(&self) -> Self {
+        Self {
+            patterns: self.patterns.clone(),
+            test_patterns: self.test_patterns.clone(),
+            generated_patterns: self.generated_patterns.clone(),
+        }
+    }
+}
+
+impl SignificantCodeConfig {
+    /// Returns true if a relative path is considered significant production
+    /// code (i.e. NOT a test, NOT generated, and matches a significant
+    /// pattern if any are configured).
+    pub fn is_significant(&self, rel_path: &str) -> bool {
+        // If any test pattern matches → not significant.
+        for p in &self.test_patterns {
+            if glob_match(p, rel_path) {
+                return false;
+            }
+        }
+        // Generated code → not significant.
+        for p in &self.generated_patterns {
+            if glob_match(p, rel_path) {
+                return false;
+            }
+        }
+        // If significant patterns are configured, file must match at least one.
+        if !self.patterns.is_empty() {
+            return self.patterns.iter().any(|p| glob_match(p, rel_path));
+        }
+        // Default: everything is significant.
+        true
+    }
+}
+
+/// Glob matcher that supports `*` and `**`. Used by `SignificantCodeConfig`.
+/// Not a full glob implementation — just enough for common patterns.
+pub fn glob_match(pattern: &str, path: &str) -> bool {
+    // Normalize separators
+    let p = pattern.replace('\\', "/");
+    let s = path.replace('\\', "/");
+    glob_recurse(&p, &s)
+}
+
+fn glob_recurse(pattern: &str, s: &str) -> bool {
+    if pattern.is_empty() {
+        return s.is_empty();
+    }
+    if let Some(rest) = pattern.strip_prefix("**/") {
+        // Try matching at every position in s.
+        for i in 0..=s.len() {
+            if glob_recurse(rest, &s[i..]) {
+                return true;
+            }
+        }
+        return false;
+    }
+    if let Some(c) = pattern.chars().next() {
+        if c == '*' {
+            // Match any sequence (no slash) until next literal char.
+            let next = &pattern[1..];
+            for i in 0..=s.len() {
+                // If next is empty, '*' can match the rest (no / restriction).
+                if next.is_empty() {
+                    if !s[..i].contains('/') {
+                        return true;
+                    }
+                } else if glob_recurse(next, &s[i..]) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+    // Literal char.
+    if s.is_empty() {
+        return false;
+    }
+    if pattern.chars().next() == s.chars().next() {
+        return glob_recurse(&pattern[1..], &s[1..]);
+    }
+    false
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -257,4 +408,26 @@ pub fn init(args: InitArgs) -> Result<std::process::ExitCode> {
     println!("  1. Edit {} to fit your project", CONFIG_FILENAME);
     println!("  2. Run: lens scan .");
     Ok(std::process::ExitCode::SUCCESS)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_glob_match_spec() {
+        assert!(glob_match("**/*.spec.ts", "copy.spec.ts"));
+        assert!(glob_match("**/*.spec.ts", "src/foo/copy.spec.ts"));
+        assert!(!glob_match("**/*.spec.ts", "src/foo/copy.ts"));
+    }
+
+    #[test]
+    fn test_significant_code() {
+        let cfg = SignificantCodeConfig::default();
+        assert!(!cfg.is_significant("copy.spec.ts"), "spec file should not be significant");
+        assert!(!cfg.is_significant("src/foo.test.ts"), "test file should not be significant");
+        assert!(!cfg.is_significant("src/foo.d.ts"), ".d.ts should not be significant");
+        assert!(cfg.is_significant("src/service.ts"), "production code should be significant");
+        assert!(cfg.is_significant("src/utils.ts"), "production code should be significant");
+    }
 }

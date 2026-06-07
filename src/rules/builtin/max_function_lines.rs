@@ -7,15 +7,23 @@ use crate::analyzer::FileAnalysis;
 use crate::rules::{Issue, Rule, Severity};
 use crate::scanner::language::Language;
 
-pub struct MaxFunctionLines;
+pub struct MaxFunctionLines {
+    pub threshold: u32,
+}
 
-const DEFAULT_THRESHOLD: u32 = 50;
+impl Default for MaxFunctionLines {
+    fn default() -> Self { Self { threshold: 50 } }
+}
+
+impl MaxFunctionLines {
+    pub fn with_threshold(threshold: u32) -> Self { Self { threshold } }
+}
 
 impl Rule for MaxFunctionLines {
     fn id(&self) -> &'static str { "max-function-lines" }
     fn name(&self) -> &'static str { "Function too long" }
     fn description(&self) -> &'static str {
-        "Functions longer than 50 lines are hard to read and test. Consider splitting."
+        "Functions longer than the configured threshold are hard to read and test. Consider splitting."
     }
     fn default_severity(&self) -> Severity { Severity::Major }
     fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
@@ -28,13 +36,13 @@ impl Rule for MaxFunctionLines {
         let Some(metrics) = &file.metrics else { return issues };
         for func in &metrics.functions {
             let len = func.end_line.saturating_sub(func.start_line) + 1;
-            if len > DEFAULT_THRESHOLD {
+            if len > self.threshold {
                 issues.push(Issue {
                     rule_id: "max-function-lines".into(),
                     severity: Severity::Major,
                     message: format!(
                         "Function `{}` is {} lines long; consider splitting (max {}).",
-                        func.name, len, DEFAULT_THRESHOLD
+                        func.name, len, self.threshold
                     ),
                     file: file.path.clone(),
                     start_line: func.start_line,

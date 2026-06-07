@@ -14,12 +14,12 @@ use tracing::info;
 
 use crate::analyzer::{
     self, duplication::{DuplicationMode, DuplicationReport}, metrics::AggregateMetrics,
-    AnalyzeConfig, ProjectAnalysis,
+    AnalyzeConfig, FileAnalysis, ProjectAnalysis,
 };
 use crate::cli::{Format, ScanArgs};
 use crate::config::Config;
 use crate::coverage::{self, CoverageReport};
-use crate::rules::{Issue, Severity};
+use crate::rules::{Issue, RuleRegistry, Severity};
 use crate::state;
 use crate::util;
 
@@ -102,7 +102,10 @@ pub fn run(config_arg: Option<PathBuf>, args: ScanArgs) -> Result<ExitCode> {
         min_duplicate_tokens: config.duplication.min_tokens,
         min_duplicate_lines: args.min_duplicate_lines.unwrap_or(config.duplication.min_lines),
         normalize_identifiers: args.normalize_identifiers || config.duplication.normalize_identifiers,
-        ..AnalyzeConfig::default()
+        k_shingle: 5,
+        winnow_window: 10,
+        min_file_size_for_complexity: 0,
+        rules: RuleRegistry::with_config(&config.rules),
     };
     let analysis = run_analyzer(&files, &analyze_cfg, &args);
     let nosonar_total: usize = analysis.files.iter().map(|a| a.nosonar_count).sum();
@@ -288,41 +291,111 @@ fn build_coverage_globset(patterns: &[String]) -> anyhow::Result<globset::GlobSe
 }
 
 fn run_analyzer(files: &[PathBuf], cfg: &AnalyzeConfig, args: &ScanArgs) -> ProjectAnalysis {
+    // --- Incremental scanning (Phase B) ---
+    // If a previous state exists, skip files whose hash matches.
+    let prev = crate::state::Snapshot::load(
+        &args.path.canonicalize().unwrap_or_else(|_| args.path.clone())
+    );
+    let scan_root = args.path.canonicalize().unwrap_or_else(|_| args.path.clone());
+    let (changed, cached): (Vec<PathBuf>, Vec<FileAnalysis>) = if prev.files.is_empty() {
+        (files.to_vec(), vec![])
+    } else {
+        let mut ch = Vec::new();
+        let mut ca = Vec::new();
+        for f in files {
+            let normalized = crate::util::path::normalize(f);
+            let s = normalized.to_string_lossy().to_string();
+            let scan_str = crate::util::path::normalize(&scan_root).to_string_lossy().to_string();
+            let rel = if s.len() > scan_str.len()
+                && s[..scan_str.len()].eq_ignore_ascii_case(&scan_str)
+            {
+                let mut rest = &s[scan_str.len()..];
+                while rest.starts_with('\\') || rest.starts_with('/') {
+                    rest = &rest[1..];
+                }
+                rest.replace('\\', "/")
+            } else {
+                s.replace('\\', "/")
+            };
+            let cur_hash = crate::state::Snapshot::hash_file(f).unwrap_or_default();
+            if let Some(snap) = prev.files.get(&rel) {
+                if snap.hash == cur_hash {
+                    // File unchanged — reconstruct from state.
+                    ca.push(FileAnalysis {
+                        path: f.clone(),
+                        language: crate::scanner::language::detect(f),
+                        analyzed: false, // not re-analyzed this run
+                        metrics: None,
+                        tokens: None,
+                        nosonar_count: 0,
+                        issues: snap.issues.iter().map(|ti| Issue {
+                            rule_id: ti.rule_id.clone(),
+                            severity: Severity::Info, // best-effort
+                            message: ti.message.clone(),
+                            file: f.clone(),
+                            start_line: ti.line,
+                            end_line: ti.line,
+                            start_column: 0,
+                            end_column: 0,
+                        }).collect(),
+                    });
+                    continue;
+                }
+            }
+            ch.push(f.clone());
+        }
+        (ch, ca)
+    };
+    let skipped = cached.len();
+    let total = files.len();
+
     let show_progress = !args.quiet
         && matches!(args.format, Format::Terminal)
-        && files.len() > 100
+        && changed.len() > 100
         && std::io::stderr().is_terminal();
 
-    if show_progress {
-        let pb = indicatif::ProgressBar::new(files.len() as u64);
+    let mut result = if show_progress {
+        let pb = indicatif::ProgressBar::new(changed.len() as u64);
         pb.set_style(
             indicatif::ProgressStyle::default_bar()
                 .template("{spinner:.green} [{bar:30.cyan/blue}] {pos}/{len} files")
                 .expect("valid progress template")
                 .progress_chars("█▓▒░"),
         );
-
-        // Animate the progress bar in a separate thread while the analysis
-        // runs. indicatif doesn't have a direct hook for rayon's iterators.
-        let total = files.len() as u64;
+        let cnt = changed.len() as u64;
         let (tx, rx) = std::sync::mpsc::channel::<()>();
         let anim = std::thread::spawn(move || {
             let mut i = 0u64;
             while rx.try_recv().is_err() {
                 pb.set_message("analyzing…".to_string());
-                pb.set_position(i.min(total));
+                pb.set_position(i.min(cnt));
                 std::thread::sleep(std::time::Duration::from_millis(50));
                 i = i.saturating_add(1);
             }
             pb.finish_and_clear();
         });
-        let result = analyzer::analyze(files, cfg);
+        let res = analyzer::analyze(&changed, cfg);
         let _ = tx.send(());
         let _ = anim.join();
-        result
+        res
     } else {
-        analyzer::analyze(files, cfg)
+        analyzer::analyze(&changed, cfg)
+    };
+
+    // Merge cached (unchanged) file analyses back in.
+    result.files.extend(cached);
+
+    if skipped > 0 && !args.quiet {
+        println!(
+            "  {} scanned {} of {} files ({} skipped, hash match)",
+            "⚡".yellow(),
+            changed.len(),
+            total,
+            skipped
+        );
     }
+
+    result
 }
 
 fn evaluate_gate(
@@ -545,7 +618,7 @@ fn report_terminal(
     print_duplication_summary(&analysis.duplication);
     print_coverage_summary(coverage);
     print_ratings_summary(&analysis.files);
-    print_issues_summary(&analysis.files, &ctx.root, new_code, since_days);
+    print_issues_summary(&analysis.files, &ctx.root, new_code, since_days, &ctx.config.significant_code);
 
     println!();
     println!(
@@ -556,7 +629,7 @@ fn report_terminal(
     println!();
 }
 
-fn print_issues_summary(files: &[crate::analyzer::FileAnalysis], scan_root: &Path, new_code: bool, since_days: Option<u32>) {
+fn print_issues_summary(files: &[crate::analyzer::FileAnalysis], scan_root: &Path, new_code: bool, since_days: Option<u32>, sig_config: &crate::config::SignificantCodeConfig) {
     let snapshot = state::Snapshot::load(scan_root);
     // When --new-code is set, only NEW issues are shown; the rest are
     // hidden but the lifecycle counts still reflect the full picture.
@@ -646,6 +719,32 @@ fn print_issues_summary(files: &[crate::analyzer::FileAnalysis], scan_root: &Pat
             persistent_count,
             fixed_count.to_string().cyan(),
             regressed_count.to_string().magenta(),
+        );
+    }
+
+    // Significant code breakdown.
+    let scan_root_normalized = crate::util::path::normalize(scan_root)
+        .to_string_lossy().to_string().replace('\\', "/");
+    let sig_count: usize = all.iter().filter(|i| {
+        let normalized = crate::util::path::normalize(&i.file)
+            .to_string_lossy().to_string().replace('\\', "/");
+        let rel = if normalized.len() > scan_root_normalized.len()
+            && normalized[..scan_root_normalized.len()].eq_ignore_ascii_case(&scan_root_normalized)
+        {
+            let mut rest = &normalized[scan_root_normalized.len()..];
+            while rest.starts_with('/') { rest = &rest[1..]; }
+            rest.to_string()
+        } else {
+            normalized
+        };
+        sig_config.is_significant(&rel)
+    }).count();
+    let non_sig = all.len() - sig_count;
+    if non_sig > 0 {
+        println!(
+            "  {} in significant code, {} in test/generated (excluded from gate)",
+            sig_count.to_string().green(),
+            non_sig.to_string().dimmed(),
         );
     }
 

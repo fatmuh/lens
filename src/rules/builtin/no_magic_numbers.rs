@@ -1,5 +1,6 @@
 //! `no-magic-numbers` — flags numeric literals in expressions (other than
-//! common ones like 0, 1, 2, -1, 100, 1000).
+//! common ones like 0, 1, 2, -1, 100, 1000 and those below the configured
+//! `min_value`).
 //!
 //! This is a heuristic rule — it doesn't track constants vs variables. The
 //! goal is to flag obvious magic numbers, not all of them.
@@ -10,7 +11,17 @@ use crate::analyzer::FileAnalysis;
 use crate::rules::{Issue, Rule, Severity};
 use crate::scanner::language::Language;
 
-pub struct NoMagicNumbers;
+pub struct NoMagicNumbers {
+    pub min_value: u32,
+}
+
+impl Default for NoMagicNumbers {
+    fn default() -> Self { Self { min_value: 3 } }
+}
+
+impl NoMagicNumbers {
+    pub fn with_min_value(min_value: u32) -> Self { Self { min_value } }
+}
 
 const ALLOWED: &[i64] = &[-1, 0, 1, 2, 10, 100, 1000];
 
@@ -53,6 +64,7 @@ impl Rule for NoMagicNumbers {
                     Err(_) => return, // float, hex, etc. — skip
                 };
                 if ALLOWED.contains(&n) { return; }
+                if n.abs() < self.min_value as i64 { return; }
                 let start = node.start_position();
                 let end = node.end_position();
                 issues.push(Issue {

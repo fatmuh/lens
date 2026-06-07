@@ -1,6 +1,7 @@
 //! `max-params` — flags functions/methods with more than a threshold of
 //! parameters (default 5). Long parameter lists are a smell — usually a
-//! missing options object or builder.
+//! missing options object or builder. Threshold from
+//! `[rules.max_params]` in quality-gate.toml.
 
 use tree_sitter::Node;
 
@@ -8,15 +9,23 @@ use crate::analyzer::FileAnalysis;
 use crate::rules::{Issue, Rule, Severity};
 use crate::scanner::language::Language;
 
-pub struct MaxParams;
+pub struct MaxParams {
+    pub threshold: u32,
+}
 
-const DEFAULT_THRESHOLD: u32 = 5;
+impl Default for MaxParams {
+    fn default() -> Self { Self { threshold: 5 } }
+}
+
+impl MaxParams {
+    pub fn with_threshold(threshold: u32) -> Self { Self { threshold } }
+}
 
 impl Rule for MaxParams {
     fn id(&self) -> &'static str { "max-params" }
     fn name(&self) -> &'static str { "Too many parameters" }
     fn description(&self) -> &'static str {
-        "Functions with more than 5 parameters are hard to call. Consider an options object."
+        "Functions with more than the configured parameter count are hard to call. Consider an options object."
     }
     fn default_severity(&self) -> Severity { Severity::Major }
     fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
@@ -32,7 +41,7 @@ impl Rule for MaxParams {
                 }
                 let Some(params) = node.child_by_field_name("parameters") else { return; };
                 let count = count_params(params, source);
-                if count > DEFAULT_THRESHOLD {
+                if count > self.threshold {
                     let start = node.start_position();
                     let end = node.end_position();
                     let name = node.child_by_field_name("name")
@@ -43,7 +52,7 @@ impl Rule for MaxParams {
                         severity: Severity::Major,
                         message: format!(
                             "Function `{}` has {} parameters (max {}).",
-                            name, count, DEFAULT_THRESHOLD
+                            name, count, self.threshold
                         ),
                         file: file.path.clone(),
                         start_line: start.row as u32 + 1,

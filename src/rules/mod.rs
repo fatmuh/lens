@@ -134,7 +134,12 @@ impl RuleRegistry {
     /// stubs (recognized by SonarQube S-ID). Unimplemented rules return
     /// no issues but are listed in `lens rules` for compatibility.
     pub fn default_registry() -> Self {
-        let mut rules = builtin::all_rules();
+        Self::with_config(&Default::default())
+    }
+
+    /// Build the registry with per-rule config from `quality-gate.toml`.
+    pub fn with_config(cfg: &crate::config::RulesConfig) -> Self {
+        let mut rules = builtin::all_rules_with(cfg);
         rules.extend(sonar_compat::all_sonar_stubs());
         Self { rules }
     }
