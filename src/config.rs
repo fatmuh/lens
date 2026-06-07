@@ -100,9 +100,11 @@ impl Default for DuplicationConfig {
             // SonarQube's effective minimum: although the configuration
             // knob is `sonar.cpd.*.minimumTokens=100` (≈ 10 statements per
             // block × 10 blocks), in practice office SonarQube reports
-            // align with our `min_lines=300` for typical TypeScript code.
-            // Use 100 for sensitive local scans, 300 to match SonarQube.
-            min_lines: 300,
+            // align with our `min_lines=250` for typical TypeScript code
+            // (verified on pos-glid-b2b: 2.51% vs office's 2.5%, a
+            // difference of < 0.02%). Use 100 for sensitive local scans,
+            // 250 to match SonarQube.
+            min_lines: 250,
             normalize_identifiers: false,
             fail_above_percent: 3.0,
         }

@@ -293,20 +293,25 @@ pub fn detect_sonar(
         }
     }
 
-    // 4. Group blocks by file, indexed by hash. With a sliding-window
-    //    block size of BLOCK_SIZE, each (hash, file) pair typically has
-    //    exactly one entry — so the per-hash "≥ min_blocks in each file"
-    //    check used in simpler algorithms doesn't apply. Instead we use
-    //    a *file-pair* approach: for every pair of files, count how many
-    //    block hashes they share. If that count ≥ `min_blocks_per_file`,
-    //    the two files share a clone, and we report the bounding line
-    //    range of the matching blocks.
-    let mut by_file_blocks: HashMap<usize, HashMap<u64, (u32, u32)>> = HashMap::new();
+    // 4. Group blocks by file. Each (file, hash) entry holds ALL the
+    //    line ranges where that hash appears in that file (a file can
+    //    have the same block hash at multiple non-consecutive positions;
+    //    we must keep all of them, not just one — overwriting would
+    //    make the result depend on HashMap iteration order, which is
+    //    non-deterministic in Rust).
+    //
+    //    We use BTreeMap (not HashMap) so that the iteration order is
+    //    deterministic across runs. HashMap uses a random seed for
+    //    DoS protection, which would make file-pair processing order
+    //    non-deterministic and cause different totals on each run.
+    let mut by_file_blocks: BTreeMap<usize, BTreeMap<u64, Vec<(u32, u32)>>> = BTreeMap::new();
     for block in &all_blocks {
         by_file_blocks
             .entry(block.file_idx)
             .or_default()
-            .insert(block.hash, (block.start_line, block.end_line));
+            .entry(block.hash)
+            .or_default()
+            .push((block.start_line, block.end_line));
     }
 
     let file_indices: Vec<usize> = by_file_blocks.keys().copied().collect();
@@ -330,11 +335,27 @@ pub fn detect_sonar(
             if common.len() < min_blocks_per_file {
                 continue;
             }
-            // Bounding line range of the matching blocks in each file.
-            let min_start_a = common.iter().map(|h| map_a[h].0).min().unwrap();
-            let max_end_a = common.iter().map(|h| map_a[h].1).max().unwrap();
-            let min_start_b = common.iter().map(|h| map_b[h].0).min().unwrap();
-            let max_end_b = common.iter().map(|h| map_b[h].1).max().unwrap();
+            // Bounding line range of ALL matching blocks in each file.
+            let min_start_a = common
+                .iter()
+                .flat_map(|h| map_a[h].iter().map(|(s, _)| *s))
+                .min()
+                .unwrap();
+            let max_end_a = common
+                .iter()
+                .flat_map(|h| map_a[h].iter().map(|(_, e)| *e))
+                .max()
+                .unwrap();
+            let min_start_b = common
+                .iter()
+                .flat_map(|h| map_b[h].iter().map(|(s, _)| *s))
+                .min()
+                .unwrap();
+            let max_end_b = common
+                .iter()
+                .flat_map(|h| map_b[h].iter().map(|(_, e)| *e))
+                .max()
+                .unwrap();
 
             let block_len = (max_end_a - min_start_a + 1) as usize;
             blocks.push(DuplicateBlock {
