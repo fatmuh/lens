@@ -12,6 +12,7 @@ pub mod duplication;
 pub mod metrics;
 pub mod parser;
 pub mod sonar_dup;
+pub mod taint;
 pub mod tokenize;
 
 use std::path::PathBuf;

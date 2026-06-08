@@ -114,6 +114,7 @@ pub fn all_rules_with(cfg: &crate::config::RulesConfig) -> Vec<Box<dyn Rule>> {
         cfg.disabled.iter().map(|s| s.as_str()).collect();
     let mut rules: Vec<Box<dyn Rule>> = vec![
         Box::new(no_eval::NoEval),
+        Box::new(security_taint::SecurityTaint),
         Box::new(no_new_func::NoNewFunc),
         Box::new(no_implied_eval::NoImpliedEval),
         Box::new(no_script_url::NoScriptUrl),
@@ -224,3 +225,4 @@ pub fn all_rules_with(cfg: &crate::config::RulesConfig) -> Vec<Box<dyn Rule>> {
     rules.retain(|r| !disabled.contains(r.id()));
     rules
 }
+pub mod security_taint;
