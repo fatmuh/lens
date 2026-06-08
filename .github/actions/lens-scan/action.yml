@@ -1,0 +1,128 @@
+name: 'Lens CI Scan'
+description: 'Run Lens code quality scan with SARIF upload and PR comment'
+branding:
+  icon: 'search'
+  color: 'purple'
+
+inputs:
+  path:
+    description: 'Directory to scan'
+    required: false
+    default: '.'
+  config:
+    description: 'Path to quality-gate.toml'
+    required: false
+    default: ''
+  gate:
+    description: 'Fail on quality gate violation'
+    required: false
+    default: 'true'
+  max-rating:
+    description: 'Maximum rating allowed (A-E)'
+    required: false
+    default: ''
+  sarif-output:
+    description: 'SARIF output file path'
+    required: false
+    default: 'lens-results.sarif'
+  comment:
+    description: 'Post PR comment with results'
+    required: false
+    default: 'true'
+  since-days:
+    description: 'Only show issues from files modified within N days'
+    required: false
+    default: ''
+  token:
+    description: 'GitHub token for PR comment'
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Lens
+      shell: bash
+      run: |
+        if ! command -v lens &> /dev/null; then
+          echo "📦 Installing Lens..."
+          OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+          ARCH="$(uname -m)"
+          [ "$ARCH" = "x86_64" ] && ARCH="x64"
+          [ "$ARCH" = "aarch64" ] && ARCH="arm64"
+          
+          RELEASE_URL=$(curl -sL https://api.github.com/repos/fatmuh/lens/releases/latest | \
+            grep "browser_download_url.*lens-${OS}-${ARCH}" | head -1 | cut -d'"' -f4)
+          
+          if [ -z "$RELEASE_URL" ]; then
+            echo "::error::Could not find Lens binary for ${OS}-${ARCH}"
+            exit 1
+          fi
+          
+          curl -sL "$RELEASE_URL" | tar xz -C /usr/local/bin --strip-components=1
+          chmod +x /usr/local/bin/lens
+        fi
+        lens --version
+
+    - name: Run Lens CI
+      shell: bash
+      id: lens-ci
+      run: |
+        ARGS="ci --output ${{ inputs.sarif-output }} --quiet"
+        
+        [ "${{ inputs.gate }}" = "true" ] && ARGS="$ARGS --gate"
+        [ -n "${{ inputs.max-rating }}" ] && ARGS="$ARGS --max-rating ${{ inputs.max-rating }}"
+        [ -n "${{ inputs.config }}" ] && ARGS="$ARGS -c ${{ inputs.config }}"
+        [ -n "${{ inputs.since-days }}" ] && ARGS="$ARGS --since-days ${{ inputs.since-days }}"
+        
+        # Generate PR comment body
+        if [ "${{ inputs.comment }}" = "true" ] && [ -n "${{ github.event.pull_request.number }}" ]; then
+          ARGS="$ARGS --pr-comment"
+          lens $ARGS "${{ inputs.path }}" 2>/dev/null > /tmp/lens-comment.md
+          echo "has_comment=true" >> $GITHUB_OUTPUT
+        else
+          lens $ARGS "${{ inputs.path }}"
+          echo "has_comment=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Upload SARIF
+      if: always() && hashFiles(inputs.sarif-output) != ''
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.sarif-output }}
+        category: lens
+
+    - name: Comment PR
+      if: always() && steps.lens-ci.outputs.has_comment == 'true' && github.event.pull_request.number != ''
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.token }}
+        script: |
+          const fs = require('fs');
+          const body = fs.readFileSync('/tmp/lens-comment.md', 'utf8');
+          
+          // Find and update existing comment, or create new
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const marker = '<!-- lens-ci-comment -->';
+          const existing = comments.find(c => c.body.includes(marker));
+          
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body: body,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body,
+            });
+          }

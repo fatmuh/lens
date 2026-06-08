@@ -18,7 +18,7 @@ use crate::analyzer::{
     metrics::AggregateMetrics,
     AnalyzeConfig, FileAnalysis, ProjectAnalysis,
 };
-use crate::cli::{Format, ScanArgs};
+use crate::cli::{CiArgs, Format, ScanArgs};
 use crate::config::Config;
 use crate::coverage::{self, CoverageReport};
 use crate::rules::{Issue, RuleRegistry, Severity};
@@ -675,6 +675,144 @@ fn print_language_breakdown(files: &[PathBuf]) {
     for (lang, n) in counts {
         info!("  {}: {}", lang, n);
     }
+}
+
+// ---------------------------------------------------------------------------
+// CI command
+// ---------------------------------------------------------------------------
+
+pub fn run_ci(config_arg: Option<PathBuf>, args: crate::cli::CiArgs) -> Result<ExitCode> {
+    let scan_root = args
+        .path
+        .canonicalize()
+        .unwrap_or_else(|_| args.path.clone());
+    let config_path = Config::resolve_path(config_arg.as_deref(), &scan_root);
+    let config = Config::load(config_path.as_deref())
+        .with_context(|| format!("loading config from {:?}", config_path))?;
+
+    let display_root = util::path::normalize(&scan_root);
+    info!("CI scan root: {}", display_root.display());
+
+    // Build scan args from ci args
+    let scan_args = crate::cli::ScanArgs {
+        path: args.path.clone(),
+        format: crate::cli::Format::Sarif,
+        output: Some(args.output.clone()),
+        gate: args.gate,
+        watch: false,
+        verbose: false,
+        no_gitignore: false,
+        dry_run: false,
+        quiet: true,
+        no_color: true,
+        token_mode: false,
+        min_duplicate_lines: None,
+        normalize_identifiers: false,
+        coverage_ut: vec![],
+        coverage_it: vec![],
+        new_code: args.new_code,
+        no_state: true,
+        since_days: args.since_days,
+        max_rating: args.max_rating,
+    };
+
+    // Run the scan
+    let exit_code = run(config_arg, scan_args)?;
+
+    // Print PR comment body if requested
+    if args.pr_comment {
+        print_pr_comment(&scan_root, &config, &args);
+    }
+
+    Ok(exit_code)
+}
+
+fn print_pr_comment(root: &Path, config: &Config, args: &crate::cli::CiArgs) {
+    // Read the SARIF file to extract summary
+    let sarif_path = &args.output;
+    let sarif_content = match std::fs::read_to_string(sarif_path) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    let sarif: serde_json::Value = match serde_json::from_str(&sarif_content) {
+        Ok(v) => v,
+        Err(_) => return,
+    };
+
+    let runs = sarif["runs"].as_array();
+    let run = runs.and_then(|r| r.first());
+    let results = run.and_then(|r| r["results"].as_array());
+    let issue_count = results.map(|r| r.len()).unwrap_or(0);
+
+    // Count by severity
+    let mut errors = 0u64;
+    let mut warnings = 0u64;
+    let mut notes = 0u64;
+    if let Some(results) = results {
+        for r in results {
+            match r["level"].as_str().unwrap_or("") {
+                "error" => errors += 1,
+                "warning" => warnings += 1,
+                _ => notes += 1,
+            }
+        }
+    }
+
+    // Quality gate status
+    let gate_passed = !args.gate || issue_count == 0;
+    let gate_icon = if gate_passed { "✅" } else { "❌" };
+    let gate_text = if gate_passed { "PASSED" } else { "FAILED" };
+
+    println!("<!-- lens-ci-comment -->");
+    println!("## 🔍 Lens CI Report");
+    println!();
+    println!("**Quality Gate:** {} {}", gate_icon, gate_text);
+    println!();
+    println!("| Metric | Value |");
+    println!("|--------|-------|");
+    println!(
+        "| Issues | {} (🔴 {} · 🟡 {} · 🔵 {}) |",
+        issue_count, errors, warnings, notes
+    );
+
+    // Show top 5 issues
+    if issue_count > 0 {
+        println!();
+        println!("<details><summary>Top issues</summary>");
+        println!();
+        if let Some(results) = results {
+            for (i, r) in results.iter().take(10).enumerate() {
+                let rule = r["ruleId"].as_str().unwrap_or("?");
+                let msg = r["message"]["text"].as_str().unwrap_or("");
+                let loc = &r["locations"][0]["physicalLocation"];
+                let file = loc["artifactLocation"]["uri"].as_str().unwrap_or("?");
+                let line = loc["region"]["startLine"].as_u64().unwrap_or(0);
+                let level = r["level"].as_str().unwrap_or("note");
+                let icon = match level {
+                    "error" => "🔴",
+                    "warning" => "🟡",
+                    _ => "🔵",
+                };
+                println!(
+                    "{}. {} **{}**: {} ({}:{})",
+                    i + 1,
+                    icon,
+                    rule,
+                    msg,
+                    file,
+                    line
+                );
+            }
+        }
+        println!("</details>");
+    }
+
+    println!();
+    println!("---");
+    println!(
+        "<sub>🤖 Generated by [Lens](https://github.com/fatmuh/lens) v{}</sub>",
+        env!("CARGO_PKG_VERSION")
+    );
 }
 
 // ---------------------------------------------------------------------------

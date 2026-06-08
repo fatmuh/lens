@@ -64,6 +64,10 @@ pub enum Command {
 
     /// Print version information.
     Version,
+
+    /// Run CI scan — SARIF output + quality gate + PR comment.
+    #[command(visible_alias = "c")]
+    Ci(CiArgs),
 }
 
 #[derive(Debug, Args)]
@@ -329,4 +333,40 @@ pub struct TestArgs {
     /// AI model to use (overrides ~/.lens/config.toml).
     #[arg(long, env = "LENS_AI_MODEL")]
     pub ai_model: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct CiArgs {
+    /// Directory to scan (default: current dir).
+    #[arg(value_name = "PATH", default_value = ".")]
+    pub path: PathBuf,
+
+    /// Output SARIF file path (default: lens-results.sarif).
+    #[arg(
+        long,
+        short = 'o',
+        value_name = "FILE",
+        default_value = "lens-results.sarif"
+    )]
+    pub output: PathBuf,
+
+    /// Fail on quality gate violation (exit 1).
+    #[arg(long)]
+    pub gate: bool,
+
+    /// Maximum rating allowed (A-E). Fails if any rating is worse.
+    #[arg(long = "max-rating", value_name = "LETTER", value_parser = parse_rating)]
+    pub max_rating: Option<crate::rating::Rating>,
+
+    /// Print a GitHub PR comment body to stdout.
+    #[arg(long)]
+    pub pr_comment: bool,
+
+    /// Only show issues from files modified within the last N days.
+    #[arg(long = "since-days", value_name = "DAYS")]
+    pub since_days: Option<u32>,
+
+    /// Only show issues from files added/changed since previous scan.
+    #[arg(long)]
+    pub new_code: bool,
 }

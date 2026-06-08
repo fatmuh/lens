@@ -1,0 +1,51 @@
+name: Lens CI
+
+on:
+  workflow_call:
+    inputs:
+      path:
+        description: 'Directory to scan'
+        required: false
+        default: '.'
+        type: string
+      gate:
+        description: 'Fail on quality gate violation'
+        required: false
+        default: true
+        type: boolean
+      max-rating:
+        description: 'Maximum rating allowed (A-E)'
+        required: false
+        default: ''
+        type: string
+      comment:
+        description: 'Post PR comment'
+        required: false
+        default: true
+        type: boolean
+      since-days:
+        description: 'Only issues from last N days'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lens Scan
+        uses: fatmuh/lens/.github/actions/lens-scan@main
+        with:
+          path: ${{ inputs.path }}
+          gate: ${{ inputs.gate }}
+          max-rating: ${{ inputs.max-rating }}
+          comment: ${{ inputs.comment }}
+          since-days: ${{ inputs.since-days }}
+          token: ${{ secrets.GITHUB_TOKEN }}
