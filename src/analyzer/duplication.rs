@@ -262,7 +262,18 @@ pub fn detect_sonar(
             )
         })
         .collect();
-    let total_lines: u64 = per_file.iter().map(|(_, s)| s.len() as u64).sum();
+    // Total lines = max line number across all tokens in all files.
+    // This matches SonarQube: file.getFileAttributes().getLines().
+    let total_lines: u64 = files
+        .iter()
+        .map(|(_, tokens)| {
+            tokens
+                .iter()
+                .map(|t| t.line)
+                .max()
+                .unwrap_or(0) as u64
+        })
+        .sum();
 
     // 2. Apply SonarQube's consecutive-duplicate filter (from BlockChunker).
     let per_file_filtered: Vec<(PathBuf, Vec<(u32, String)>)> = per_file
@@ -319,8 +330,9 @@ pub fn detect_sonar(
 
     let file_indices: Vec<usize> = by_file_blocks.keys().copied().collect();
     let mut blocks: Vec<DuplicateBlock> = Vec::new();
-    let mut duplicated_lines: u64 = 0;
-    let mut per_file_dup: HashMap<PathBuf, u64> = HashMap::new();
+    // SonarQube uses unique line numbers per file (HashSet) to avoid
+    // counting the same line multiple times when blocks overlap.
+    let mut dup_lines_per_file: HashMap<usize, HashSet<u32>> = HashMap::new();
 
     for i in 0..file_indices.len() {
         for j in (i + 1)..file_indices.len() {
@@ -377,9 +389,16 @@ pub fn detect_sonar(
                     },
                 ],
             });
-            duplicated_lines += block_len as u64;
-            *per_file_dup.entry(files[file_a].0.clone()).or_insert(0) += block_len as u64;
-            *per_file_dup.entry(files[file_b].0.clone()).or_insert(0) += block_len as u64;
+            // Collect unique duplicated line numbers for each file.
+            // This matches SonarQube's approach: HashSet<Integer> per file.
+            let set_a = dup_lines_per_file.entry(file_a).or_insert_with(HashSet::new);
+            for line in min_start_a..=max_end_a {
+                set_a.insert(line);
+            }
+            let set_b = dup_lines_per_file.entry(file_b).or_insert_with(HashSet::new);
+            for line in min_start_b..=max_end_b {
+                set_b.insert(line);
+            }
         }
     }
 
@@ -419,6 +438,11 @@ pub fn detect_sonar(
     let blocks: Vec<DuplicateBlock> = blocks.into_iter().take(20).collect();
 
     // 6. Top offenders.
+    let per_file_dup: Vec<(PathBuf, u64)> = dup_lines_per_file
+        .iter()
+        .map(|(idx, set)| (files[*idx].0.clone(), set.len() as u64))
+        .collect();
+    let duplicated_lines: u64 = dup_lines_per_file.values().map(|s| s.len() as u64).sum();
     let mut offenders: Vec<(PathBuf, u64)> = per_file_dup.into_iter().collect();
     offenders.sort_by(|a, b| b.1.cmp(&a.1));
     offenders.truncate(10);
