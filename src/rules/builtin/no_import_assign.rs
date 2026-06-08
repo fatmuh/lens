@@ -29,6 +29,7 @@ impl Rule for NoImportAssign {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

@@ -25,6 +25,7 @@ impl Rule for NoEmptyFunction {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

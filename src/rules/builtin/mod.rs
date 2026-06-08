@@ -115,6 +115,12 @@ pub fn all_rules_with(cfg: &crate::config::RulesConfig) -> Vec<Box<dyn Rule>> {
     let mut rules: Vec<Box<dyn Rule>> = vec![
         Box::new(no_eval::NoEval),
         Box::new(security_taint::SecurityTaint),
+        Box::new(dart_rules::DartAvoidPrint),
+        Box::new(dart_rules::DartAvoidEmptyCatch),
+        Box::new(dart_rules::DartAvoidUnnecessaryContainers),
+        Box::new(dart_rules::DartPreferConstConstructors),
+        Box::new(dart_rules::DartAvoidWebLibraries),
+        Box::new(dart_rules::DartPreferAsyncAwait),
         Box::new(no_new_func::NoNewFunc),
         Box::new(no_implied_eval::NoImpliedEval),
         Box::new(no_script_url::NoScriptUrl),
@@ -225,4 +231,5 @@ pub fn all_rules_with(cfg: &crate::config::RulesConfig) -> Vec<Box<dyn Rule>> {
     rules.retain(|r| !disabled.contains(r.id()));
     rules
 }
+pub mod dart_rules;
 pub mod security_taint;

@@ -46,6 +46,7 @@ impl Rule for NoMagicNumbers {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

@@ -23,7 +23,7 @@ impl Rule for NoHtmlLink {
         Severity::Critical
     }
     fn languages(&self) -> &[Language] {
-        &[Language::Tsx, Language::Jsx]
+        &[Language::Tsx, Language::Jsx, Language::Dart]
     }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {

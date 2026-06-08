@@ -44,6 +44,7 @@ impl Rule for MaxParams {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

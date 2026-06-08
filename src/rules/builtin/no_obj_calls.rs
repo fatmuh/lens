@@ -27,6 +27,7 @@ impl Rule for NoObjCalls {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

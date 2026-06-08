@@ -688,9 +688,245 @@ pub fn log_injection() -> VulnClass {
     }
 }
 
+/// Flutter/Dart HTTP injection — user input in HTTP requests.
+pub fn flutter_http_injection() -> VulnClass {
+    VulnClass {
+        rule_id: "security/flutter-http-injection".into(),
+        vuln_type: "HTTP Injection".into(),
+        message: "User input flows into HTTP request. Validate URLs and parameters.".into(),
+        sources: vec![
+            SourcePattern {
+                object: "request".into(),
+                property: "*".into(),
+            },
+            SourcePattern {
+                object: "queryParameters".into(),
+                property: "*".into(),
+            },
+            SourcePattern {
+                object: "data".into(),
+                property: "*".into(),
+            },
+            SourcePattern {
+                object: "params".into(),
+                property: "*".into(),
+            },
+            SourcePattern {
+                object: "arguments".into(),
+                property: "*".into(),
+            },
+            SourcePattern {
+                object: "snapshot".into(),
+                property: "*".into(),
+            },
+            SourcePattern {
+                object: "settings".into(),
+                property: "*".into(),
+            },
+        ],
+        sinks: vec![
+            SinkPattern {
+                name: "get".into(),
+                object: "http".into(),
+            },
+            SinkPattern {
+                name: "post".into(),
+                object: "http".into(),
+            },
+            SinkPattern {
+                name: "put".into(),
+                object: "http".into(),
+            },
+            SinkPattern {
+                name: "delete".into(),
+                object: "http".into(),
+            },
+            SinkPattern {
+                name: "get".into(),
+                object: "dio".into(),
+            },
+            SinkPattern {
+                name: "post".into(),
+                object: "dio".into(),
+            },
+            SinkPattern {
+                name: "put".into(),
+                object: "dio".into(),
+            },
+            SinkPattern {
+                name: "delete".into(),
+                object: "dio".into(),
+            },
+            SinkPattern {
+                name: "request".into(),
+                object: "dio".into(),
+            },
+            SinkPattern {
+                name: "fetch".into(),
+                object: "".into(),
+            },
+        ],
+        sanitizers: vec!["validateUrl".into(), "sanitize".into(), "encode".into()],
+    }
+}
+
+/// Flutter/Dart path traversal — user input in file paths.
+pub fn flutter_path_traversal() -> VulnClass {
+    VulnClass {
+        rule_id: "security/flutter-path-traversal".into(),
+        vuln_type: "Path Traversal".into(),
+        message: "User input flows into file path. Validate and normalize paths.".into(),
+        sources: vec![
+            SourcePattern {
+                object: "request".into(),
+                property: "*".into(),
+            },
+            SourcePattern {
+                object: "arguments".into(),
+                property: "*".into(),
+            },
+            SourcePattern {
+                object: "params".into(),
+                property: "*".into(),
+            },
+        ],
+        sinks: vec![
+            SinkPattern {
+                name: "readAsString".into(),
+                object: "File".into(),
+            },
+            SinkPattern {
+                name: "readAsStringSync".into(),
+                object: "File".into(),
+            },
+            SinkPattern {
+                name: "writeAsString".into(),
+                object: "File".into(),
+            },
+            SinkPattern {
+                name: "writeAsStringSync".into(),
+                object: "File".into(),
+            },
+            SinkPattern {
+                name: "readAsBytes".into(),
+                object: "File".into(),
+            },
+            SinkPattern {
+                name: "writeAsBytes".into(),
+                object: "File".into(),
+            },
+            SinkPattern {
+                name: "open".into(),
+                object: "File".into(),
+            },
+            SinkPattern {
+                name: "copy".into(),
+                object: "File".into(),
+            },
+            SinkPattern {
+                name: "rename".into(),
+                object: "File".into(),
+            },
+            SinkPattern {
+                name: "stat".into(),
+                object: "File".into(),
+            },
+        ],
+        sanitizers: vec!["normalize".into(), "basename".into(), "sanitize".into()],
+    }
+}
+
+/// Flutter/Dart SQL injection — user input in database queries.
+pub fn flutter_sql_injection() -> VulnClass {
+    VulnClass {
+        rule_id: "security/flutter-sql-injection".into(),
+        vuln_type: "SQL Injection".into(),
+        message: "User input flows into SQL query. Use parameterized queries.".into(),
+        sources: vec![
+            SourcePattern {
+                object: "request".into(),
+                property: "*".into(),
+            },
+            SourcePattern {
+                object: "arguments".into(),
+                property: "*".into(),
+            },
+            SourcePattern {
+                object: "params".into(),
+                property: "*".into(),
+            },
+            SourcePattern {
+                object: "data".into(),
+                property: "*".into(),
+            },
+        ],
+        sinks: vec![
+            SinkPattern {
+                name: "rawQuery".into(),
+                object: "".into(),
+            },
+            SinkPattern {
+                name: "rawInsert".into(),
+                object: "".into(),
+            },
+            SinkPattern {
+                name: "rawUpdate".into(),
+                object: "".into(),
+            },
+            SinkPattern {
+                name: "rawDelete".into(),
+                object: "".into(),
+            },
+            SinkPattern {
+                name: "execute".into(),
+                object: "database".into(),
+            },
+            SinkPattern {
+                name: "query".into(),
+                object: "database".into(),
+            },
+            SinkPattern {
+                name: "customSelect".into(),
+                object: "".into(),
+            },
+            SinkPattern {
+                name: "customInsert".into(),
+                object: "".into(),
+            },
+            SinkPattern {
+                name: "customUpdate".into(),
+                object: "".into(),
+            },
+            SinkPattern {
+                name: "customDelete".into(),
+                object: "".into(),
+            },
+            SinkPattern {
+                name: "customStatement".into(),
+                object: "".into(),
+            },
+        ],
+        sanitizers: vec!["escape".into(), "parameterize".into(), "sanitize".into()],
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Core analysis engine
 // ---------------------------------------------------------------------------
+
+/// Return taint config for the given language.
+fn taint_config_for(lang: Language) -> TaintConfig {
+    match lang {
+        Language::Dart => TaintConfig {
+            checks: vec![
+                flutter_sql_injection(),
+                flutter_http_injection(),
+                flutter_path_traversal(),
+            ],
+        },
+        _ => TaintConfig::default(),
+    }
+}
 
 /// Run taint analysis on a source file. Returns all detected vulnerabilities.
 pub fn analyze(source: &str, lang: Language) -> Vec<TaintVulnerability> {
@@ -704,7 +940,7 @@ pub fn analyze(source: &str, lang: Language) -> Vec<TaintVulnerability> {
         return vec![];
     };
 
-    let config = TaintConfig::default();
+    let config = taint_config_for(lang);
     let root = tree.root_node();
     let source_bytes = source.as_bytes();
 
@@ -742,6 +978,19 @@ fn collect_function_bodies<'a>(node: Node<'a>, bodies: &mut Vec<Node<'a>>) {
         // Get the body node
         if let Some(body) = node.child_by_field_name("body") {
             bodies.push(body);
+        }
+    }
+    // Dart: function_body is a direct child of function_declaration
+    if kind == "function_body" {
+        bodies.push(node);
+    }
+    // Dart: method_signature → function_body
+    if kind == "method_signature" || kind == "constructor_signature" {
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            if child.kind() == "function_body" {
+                bodies.push(child);
+            }
         }
     }
 

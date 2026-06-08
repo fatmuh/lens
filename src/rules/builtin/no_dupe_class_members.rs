@@ -27,6 +27,7 @@ impl Rule for NoDupeClassMembers {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

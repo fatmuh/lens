@@ -26,6 +26,7 @@ impl Rule for NoThrowLiteral {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

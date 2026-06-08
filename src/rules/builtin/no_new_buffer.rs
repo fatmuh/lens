@@ -26,6 +26,7 @@ impl Rule for NoNewBuffer {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

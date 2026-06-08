@@ -28,6 +28,7 @@ impl Rule for NoPromiseAllInLoop {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

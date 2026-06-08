@@ -27,6 +27,7 @@ impl Rule for DefaultCase {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

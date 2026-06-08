@@ -40,6 +40,7 @@ impl Rule for SecurityTaint {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

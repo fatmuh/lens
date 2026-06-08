@@ -27,6 +27,7 @@ impl Rule for NoParamReassign {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

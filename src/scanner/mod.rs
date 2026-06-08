@@ -874,7 +874,7 @@ fn report_terminal(
     println!();
     println!(
         "{}",
-        "  ℹ Phase 1+2+3+5+: TS metrics, rules engine (14 built-in rules), duplication, SonarQube-compatible mode, and coverage parsing (LCOV/Cobertura/JaCoCo)."
+        "  ℹ Phase 1-6: Multi-language metrics, 105 built-in rules (TS/JS/Dart), security taint analysis, SonarQube-compatible duplication, and coverage parsing."
             .dimmed()
     );
     println!();

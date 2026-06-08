@@ -25,6 +25,7 @@ impl Rule for NoSelfCompare {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

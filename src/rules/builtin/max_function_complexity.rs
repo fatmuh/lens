@@ -45,6 +45,7 @@ impl Rule for MaxFunctionComplexity {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

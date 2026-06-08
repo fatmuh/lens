@@ -26,6 +26,7 @@ impl Rule for NoUnneededTernary {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

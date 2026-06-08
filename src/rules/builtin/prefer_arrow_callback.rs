@@ -28,6 +28,7 @@ impl Rule for PreferArrowCallback {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

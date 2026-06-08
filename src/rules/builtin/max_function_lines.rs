@@ -42,6 +42,7 @@ impl Rule for MaxFunctionLines {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

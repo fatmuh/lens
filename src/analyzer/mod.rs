@@ -249,6 +249,8 @@ pub fn is_test_or_generated_file(path: &str) -> bool {
         || name.ends_with(".spec.jsx")
         || name.ends_with(".test.js")
         || name.ends_with(".test.jsx")
+        || name.ends_with("_test.dart")
+        || name.ends_with(".test.dart")
     {
         return true;
     }

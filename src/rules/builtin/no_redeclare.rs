@@ -31,6 +31,7 @@ impl Rule for NoRedeclare {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

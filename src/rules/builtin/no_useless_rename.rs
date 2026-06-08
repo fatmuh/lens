@@ -25,6 +25,7 @@ impl Rule for NoUselessRename {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

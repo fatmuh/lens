@@ -25,6 +25,7 @@ impl Rule for NoExtraBind {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

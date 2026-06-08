@@ -27,6 +27,7 @@ impl Rule for NoAwaitInLoop {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

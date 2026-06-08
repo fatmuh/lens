@@ -156,6 +156,15 @@ impl RuleRegistry {
     pub fn run(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
         for rule in &self.rules {
+            // Skip rules that don't apply to this file's language.
+            let langs = rule.languages();
+            if !langs.is_empty() {
+                if let Some(file_lang) = file.language {
+                    if !langs.contains(&file_lang) {
+                        continue;
+                    }
+                }
+            }
             issues.extend(rule.check(file, source));
         }
         issues

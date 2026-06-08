@@ -34,6 +34,7 @@ impl Rule for NoUnusedVars {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 

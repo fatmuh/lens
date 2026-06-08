@@ -26,6 +26,7 @@ impl Rule for NoLonelyIf {
             Language::Tsx,
             Language::JavaScript,
             Language::Jsx,
+            Language::Dart,
         ]
     }
 
