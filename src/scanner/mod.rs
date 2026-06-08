@@ -1083,7 +1083,8 @@ fn severity_to_sarif_level(s: Severity) -> &'static str {
 
 fn print_metrics_summary(m: &AggregateMetrics) {
     use comfy_table::{Cell, Table};
-    println!("\n  {}", "Metrics (TypeScript)".bold().cyan());
+    // Use a generic label since we now support multiple languages
+    println!("\n  {}", "Metrics".bold().cyan());
     let mut t = Table::new();
     t.set_header(vec![Cell::new("Metric"), Cell::new("Value")]);
     t.add_row(vec![Cell::new("Total LOC"), Cell::new(m.total_loc)]);
@@ -1564,7 +1565,7 @@ fn render_html(
         format!(
             r#"
   <section>
-    <h2>📏 Metrics (TypeScript)</h2>
+    <h2>📏 Metrics</h2>
     <div class="summary">
       <div class="stat"><div class="stat-value">{loc}</div><div class="stat-label">Total LOC</div></div>
       <div class="stat"><div class="stat-value">{funcs}</div><div class="stat-label">Functions</div></div>

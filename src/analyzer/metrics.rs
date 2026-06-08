@@ -55,7 +55,7 @@ pub struct AggregateMetrics {
 }
 
 /// Compute per-file metrics from a tree-sitter parse tree.
-pub fn compute(tree: &Tree, source: &str, _lang: Language) -> FileMetrics {
+pub fn compute(tree: &Tree, source: &str, lang: Language) -> FileMetrics {
     let root = tree.root_node();
     let mut m = FileMetrics::default();
 
@@ -130,10 +130,52 @@ pub fn compute(tree: &Tree, source: &str, _lang: Language) -> FileMetrics {
                     total_complexity += complexity;
                 }
             }
+            // TS + Dart shared: class_declaration
             "class_declaration" | "abstract_class_declaration" => m.class_count += 1,
             "interface_declaration" => m.interface_count += 1,
             "type_alias_declaration" => m.type_alias_count += 1,
             "enum_declaration" => m.enum_count += 1,
+            // --- Dart/Flutter AST nodes ---
+            // Dart uses: class_declaration, mixin_declaration, enum_declaration, extension_declaration
+            // function_declaration → function_signature → name
+            // method_signature → function_signature → name
+            "mixin_declaration" => m.class_count += 1,
+            "extension_declaration" => m.class_count += 1,
+            "function_declaration" if lang == Language::Dart => {
+                // Top-level Dart function
+                let name = extract_dart_func_name(&node, source);
+                let params = count_params_dart(&node, source);
+                let start = node.start_position().row as u32 + 1;
+                let end = node.end_position().row as u32 + 1;
+                let complexity = cyclomatic_complexity(&node, source);
+                functions.push(FunctionInfo {
+                    name,
+                    start_line: start,
+                    end_line: end,
+                    complexity,
+                    parameter_count: params,
+                });
+                m.function_count += 1;
+                total_complexity += complexity;
+            }
+            "method_signature" if lang == Language::Dart => {
+                // Dart method — name is inside function_signature child
+                let name = extract_dart_method_name(&node, source);
+                let params = count_params_dart(&node, source);
+                let start = node.start_position().row as u32 + 1;
+                let end = node.end_position().row as u32 + 1;
+                let complexity = cyclomatic_complexity(&node, source);
+                functions.push(FunctionInfo {
+                    name,
+                    start_line: start,
+                    end_line: end,
+                    complexity,
+                    parameter_count: params,
+                });
+                m.function_count += 1;
+                total_complexity += complexity;
+            }
+            // --- End Dart ---
             _ => {}
         }
     });
@@ -213,6 +255,99 @@ fn count_params(node: &Node, source: &str) -> u32 {
     }
     let _ = source; // not used directly
     n
+}
+
+fn count_params_dart(node: &Node, source: &str) -> u32 {
+    // Dart uses: function_signature → formal_parameter_list
+    // method_signature → function_signature → formal_parameter_list
+    let mut n = 0u32;
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        // Look for function_signature which contains formal_parameter_list
+        if child.kind() == "function_signature" {
+            let mut c2 = child.walk();
+            for sig_child in child.children(&mut c2) {
+                if sig_child.kind() == "formal_parameter_list" {
+                    n += count_dart_params_in_list(&sig_child);
+                }
+            }
+        }
+        if child.kind() == "formal_parameter_list" {
+            n += count_dart_params_in_list(&child);
+        }
+    }
+    let _ = source;
+    n
+}
+
+fn count_dart_params_in_list(list: &Node) -> u32 {
+    let mut n = 0u32;
+    let mut cursor = list.walk();
+    for child in list.children(&mut cursor) {
+        if child.kind() == "formal_parameter" {
+            n += 1;
+        }
+        // Optional positional params: (a, b)
+        if child.kind() == "optional_formal_parameters" {
+            let mut c2 = child.walk();
+            for p in child.children(&mut c2) {
+                if p.kind() == "formal_parameter" || p.kind() == "default_formal_parameter" {
+                    n += 1;
+                }
+            }
+        }
+        // Named params: {a, b}
+        if child.kind() == "named_formal_parameters" {
+            let mut c2 = child.walk();
+            for p in child.children(&mut c2) {
+                if p.kind() == "named_formal_parameter"
+                    || p.kind() == "default_named_parameter"
+                    || p.kind() == "required_parameter"
+                {
+                    n += 1;
+                }
+            }
+        }
+    }
+    n
+}
+
+fn extract_dart_func_name(node: &Node, source: &str) -> String {
+    // function_declaration → function_signature → name: (identifier)
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        if child.kind() == "function_signature" {
+            if let Some(name_node) = child.child_by_field_name("name") {
+                if let Ok(name) = name_node.utf8_text(source.as_bytes()) {
+                    return name.to_string();
+                }
+            }
+        }
+    }
+    "<anonymous>".to_string()
+}
+
+fn extract_dart_method_name(node: &Node, source: &str) -> String {
+    // method_signature → function_signature → name: (identifier)
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        if child.kind() == "function_signature" {
+            if let Some(name_node) = child.child_by_field_name("name") {
+                if let Ok(name) = name_node.utf8_text(source.as_bytes()) {
+                    return name.to_string();
+                }
+            }
+        }
+        // getter/setter
+        if child.kind() == "getter_signature" || child.kind() == "setter_signature" {
+            if let Some(name_node) = child.child_by_field_name("name") {
+                if let Ok(name) = name_node.utf8_text(source.as_bytes()) {
+                    return name.to_string();
+                }
+            }
+        }
+    }
+    "<anonymous>".to_string()
 }
 
 fn arrow_function_name(node: &Node, source: &str) -> Option<String> {

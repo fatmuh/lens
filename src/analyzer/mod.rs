@@ -14,6 +14,7 @@ pub mod parser;
 pub mod sonar_dup;
 pub mod taint;
 pub mod tokenize;
+pub mod tokenize_dart;
 
 use std::path::PathBuf;
 
@@ -125,7 +126,7 @@ pub fn analyze(files: &[PathBuf], config: &AnalyzeConfig) -> ProjectAnalysis {
     // We use the significant_code config to determine which files
     // are production code vs test/generated.
     // SonarQube only runs CPD on files recognized by the language analyzer.
-    // For our TypeScript-first pivot, that means .ts/.tsx/.js/.jsx only.
+    // TypeScript/JS + Dart files.
     let tokens: Vec<(PathBuf, Vec<tokenize::Token>)> = analyses
         .iter()
         .filter(|a| {
@@ -140,7 +141,7 @@ pub fn analyze(files: &[PathBuf], config: &AnalyzeConfig) -> ProjectAnalysis {
                 .and_then(|e| e.to_str())
                 .map(|e| e.to_ascii_lowercase())
                 .unwrap_or_default();
-            matches!(ext.as_str(), "ts" | "tsx" | "js" | "jsx")
+            matches!(ext.as_str(), "ts" | "tsx" | "js" | "jsx" | "dart")
         })
         .filter_map(|a| {
             let toks = a.tokens.clone()?;
@@ -190,16 +191,22 @@ fn analyze_file(path: &PathBuf, config: &AnalyzeConfig) -> FileAnalysis {
     // NOSONAR count (works on raw source, language-aware).
     let nosonar_count = crate::scanner::nosonar::count(&content, lang);
 
-    // Tokenize for duplication (language-agnostic, strip comments + strings).
-    let tokens = tokenize::tokenize(&content);
+    // Tokenize for duplication (language-specific).
+    let tokens = match lang {
+        Some(Language::Dart) => tokenize_dart::tokenize_dart(&content),
+        _ => tokenize::tokenize(&content),
+    };
 
-    // Metrics — only for TypeScript / TSX.
+    // Metrics — TypeScript/TSX and Dart.
     let metrics = match lang {
         Some(Language::TypeScript) | Some(Language::Tsx) => {
             parser::with_parser(lang.unwrap(), &content, |tree| {
                 metrics::compute(tree, &content, lang.unwrap())
             })
         }
+        Some(Language::Dart) => parser::with_parser(Language::Dart, &content, |tree| {
+            metrics::compute(tree, &content, Language::Dart)
+        }),
         _ => None,
     };
 

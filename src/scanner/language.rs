@@ -25,6 +25,7 @@ pub enum Language {
     Php,
     Kotlin,
     Swift,
+    Dart,
     Scala,
     Bash,
     Sql,
@@ -58,6 +59,7 @@ impl Language {
             Php => &["php"],
             Kotlin => &["kt", "kts"],
             Swift => &["swift"],
+            Dart => &["dart"],
             Scala => &["scala", "sc"],
             Bash => &["sh", "bash", "zsh"],
             Sql => &["sql"],
@@ -79,7 +81,7 @@ impl Language {
         use NosonarStyle::*;
         match self {
             Rust | TypeScript | Tsx | JavaScript | Jsx | Go | Java | C | Cpp | CSharp | Kotlin
-            | Swift | Scala => &[Line],
+            | Swift | Scala | Dart => &[Line],
             Python | Ruby | Bash | Yaml | Toml => &[Hash],
             Sql => &[DashDash],
             Html => &[Block],
@@ -121,6 +123,7 @@ impl fmt::Display for Language {
             Language::Php => "PHP",
             Language::Kotlin => "Kotlin",
             Language::Swift => "Swift",
+            Language::Dart => "Dart",
             Language::Scala => "Scala",
             Language::Bash => "Shell",
             Language::Sql => "SQL",
@@ -156,6 +159,7 @@ impl FromStr for Language {
             "php" => Language::Php,
             "kotlin" | "kt" => Language::Kotlin,
             "swift" => Language::Swift,
+            "dart" => Language::Dart,
             "scala" => Language::Scala,
             "bash" | "sh" | "shell" => Language::Bash,
             "sql" => Language::Sql,
@@ -200,6 +204,7 @@ pub const ALL_LANGUAGES: &[Language] = &[
     Language::Php,
     Language::Kotlin,
     Language::Swift,
+    Language::Dart,
     Language::Scala,
     Language::Bash,
     Language::Sql,

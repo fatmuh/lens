@@ -55,6 +55,7 @@ chrono = { version = "0.4", features = ["serde"] }
 # Parsing
 tree-sitter = "0.25"
 tree-sitter-typescript = "0.23"
+tree-sitter-dart = "0.2"
 quick-xml = "0.36"
 
 # AI Agent (OpenAI-compatible BYOK)
