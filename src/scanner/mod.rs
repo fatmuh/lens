@@ -321,12 +321,16 @@ fn run_analyzer(files: &[PathBuf], cfg: &AnalyzeConfig, args: &ScanArgs) -> Proj
             if let Some(snap) = prev.files.get(&rel) {
                 if snap.hash == cur_hash {
                     // File unchanged — reconstruct from state.
+                    // Tokenize for duplication detection (cheap, no parsing).
+                    let tokens = std::fs::read_to_string(f)
+                        .ok()
+                        .map(|c| crate::analyzer::tokenize::tokenize(&c));
                     ca.push(FileAnalysis {
                         path: f.clone(),
                         language: crate::scanner::language::detect(f),
                         analyzed: false, // not re-analyzed this run
                         metrics: None,
-                        tokens: None,
+                        tokens,
                         nosonar_count: 0,
                         issues: snap.issues.iter().map(|ti| Issue {
                             rule_id: ti.rule_id.clone(),
@@ -384,6 +388,28 @@ fn run_analyzer(files: &[PathBuf], cfg: &AnalyzeConfig, args: &ScanArgs) -> Proj
 
     // Merge cached (unchanged) file analyses back in.
     result.files.extend(cached);
+
+    // Re-run duplication detection across ALL files (changed + cached).
+    // The analyzer only saw `changed` files, but duplication needs the full set.
+    if skipped > 0 {
+        let tokens: Vec<(PathBuf, Vec<crate::analyzer::tokenize::Token>)> = result
+            .files
+            .iter()
+            .filter_map(|a| {
+                let toks = a.tokens.as_ref()?;
+                Some((a.path.clone(), toks.clone()))
+            })
+            .collect();
+        result.duplication = crate::analyzer::duplication::detect_with_mode(
+            &tokens,
+            cfg.duplication_mode,
+            cfg.k_shingle,
+            cfg.winnow_window,
+            cfg.min_duplicate_tokens,
+            cfg.min_duplicate_lines,
+            cfg.normalize_identifiers,
+        );
+    }
 
     if skipped > 0 && !args.quiet {
         println!(
