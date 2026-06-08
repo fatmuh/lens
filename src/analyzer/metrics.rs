@@ -110,8 +110,8 @@ pub fn compute(tree: &Tree, source: &str, _lang: Language) -> FileMetrics {
             }
             "arrow_function" | "function" => {
                 // Try to extract a name from a parent variable declarator.
-                let name = arrow_function_name(&node, source)
-                    .unwrap_or_else(|| "<anonymous>".to_string());
+                let name =
+                    arrow_function_name(&node, source).unwrap_or_else(|| "<anonymous>".to_string());
                 let params = count_params(&node, source);
                 let complexity = cyclomatic_complexity(&node, source);
                 let start = node.start_position().row as u32 + 1;
@@ -194,16 +194,15 @@ fn count_lines(source: &str, m: &mut FileMetrics) {
 }
 
 fn count_params(node: &Node, source: &str) -> u32 {
-    let Some(params) = node.child_by_field_name("parameters") else { return 0 };
+    let Some(params) = node.child_by_field_name("parameters") else {
+        return 0;
+    };
     let mut n = 0u32;
     let mut cursor = params.walk();
     for child in params.children(&mut cursor) {
         if matches!(
             child.kind(),
-            "required_parameter"
-                | "optional_parameter"
-                | "rest_pattern"
-                | "assignment_pattern"
+            "required_parameter" | "optional_parameter" | "rest_pattern" | "assignment_pattern"
         ) {
             n += 1;
         }
@@ -237,28 +236,20 @@ fn arrow_function_name(node: &Node, source: &str) -> Option<String> {
 /// construct found in the node's subtree.
 pub fn cyclomatic_complexity(node: &Node, source: &str) -> u32 {
     let mut count = 1u32;
-    visit_descendants(*node, |n| {
-        match n.kind() {
-            "if_statement"
-            | "case_statement"
-            | "catch_clause"
-            | "ternary_expression" => count += 1,
-            "for_statement"
-            | "for_in_statement"
-            | "for_of_statement"
-            | "while_statement"
-            | "do_statement" => count += 1,
-            "binary_expression" => {
-                if let Some(op) = n.child_by_field_name("operator") {
-                    if let Ok(t) = op.utf8_text(source.as_bytes()) {
-                        if matches!(t, "&&" | "||" | "??" | "??=") {
-                            count += 1;
-                        }
+    visit_descendants(*node, |n| match n.kind() {
+        "if_statement" | "case_statement" | "catch_clause" | "ternary_expression" => count += 1,
+        "for_statement" | "for_in_statement" | "for_of_statement" | "while_statement"
+        | "do_statement" => count += 1,
+        "binary_expression" => {
+            if let Some(op) = n.child_by_field_name("operator") {
+                if let Ok(t) = op.utf8_text(source.as_bytes()) {
+                    if matches!(t, "&&" | "||" | "??" | "??=") {
+                        count += 1;
                     }
                 }
             }
-            _ => {}
         }
+        _ => {}
     });
     count
 }
@@ -299,15 +290,11 @@ pub fn aggregate(files: &[&FileMetrics]) -> AggregateMetrics {
     }
 
     if agg.total_functions > 0 {
-        agg.avg_complexity_per_function =
-            agg.total_complexity as f64 / agg.total_functions as f64;
+        agg.avg_complexity_per_function = agg.total_complexity as f64 / agg.total_functions as f64;
     }
 
     // Find the most complex function overall.
-    agg.max_function = all_functions
-        .iter()
-        .max_by_key(|f| f.complexity)
-        .cloned();
+    agg.max_function = all_functions.iter().max_by_key(|f| f.complexity).cloned();
 
     // Top 10 functions by complexity.
     all_functions.sort_by(|a, b| b.complexity.cmp(&a.complexity));
@@ -340,12 +327,22 @@ class Foo {
     }
 }
 "#;
-        let m = with_parser(Language::TypeScript, src, |t| compute(t, src, Language::TypeScript))
-            .unwrap();
+        let m = with_parser(Language::TypeScript, src, |t| {
+            compute(t, src, Language::TypeScript)
+        })
+        .unwrap();
 
-        assert!(m.function_count >= 2, "expected >= 2 functions, got {}", m.function_count);
+        assert!(
+            m.function_count >= 2,
+            "expected >= 2 functions, got {}",
+            m.function_count
+        );
         assert_eq!(m.class_count, 1);
-        assert!(m.cyclomatic_complexity >= 3, "expected >= 3, got {}", m.cyclomatic_complexity);
+        assert!(
+            m.cyclomatic_complexity >= 3,
+            "expected >= 3, got {}",
+            m.cyclomatic_complexity
+        );
 
         // `add` has an if (+1), `method` has a for (+1), so cyclomatic >= 3
     }
@@ -353,8 +350,10 @@ class Foo {
     #[test]
     fn handles_arrow_function_in_variable() {
         let src = "const double = (x: number) => x * 2;\n";
-        let m = with_parser(Language::TypeScript, src, |t| compute(t, src, Language::TypeScript))
-            .unwrap();
+        let m = with_parser(Language::TypeScript, src, |t| {
+            compute(t, src, Language::TypeScript)
+        })
+        .unwrap();
         assert_eq!(m.function_count, 1);
         let f = &m.functions[0];
         assert_eq!(f.name, "double");

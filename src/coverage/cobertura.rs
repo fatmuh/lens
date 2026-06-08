@@ -99,10 +99,7 @@ pub fn parse(content: &str) -> CoverageReport {
     report
 }
 
-fn read_line_into(
-    f: &mut FileCoverage,
-    e: &quick_xml::events::BytesStart<'_>,
-) {
+fn read_line_into(f: &mut FileCoverage, e: &quick_xml::events::BytesStart<'_>) {
     let mut line_num: u32 = 0;
     let mut hits: u64 = 0;
     for attr in e.attributes().flatten() {

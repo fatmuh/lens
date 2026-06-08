@@ -13,8 +13,8 @@ pub mod no_await_in_loop;
 pub mod no_bitwise;
 pub mod no_console;
 pub mod no_control_regex;
-pub mod no_duplicate_imports;
 pub mod no_dupe_keys;
+pub mod no_duplicate_imports;
 pub mod no_else_return;
 pub mod no_empty_function;
 pub mod no_empty_interface;
@@ -47,9 +47,9 @@ pub mod no_script_url;
 pub mod no_self_compare;
 pub mod no_sparse_arrays;
 pub mod no_throw_literal;
+pub mod no_underscore_dangle;
 pub mod no_unneeded_ternary;
 pub mod no_unreachable;
-pub mod no_underscore_dangle;
 pub mod no_unsafe_finally;
 pub mod no_unused_vars;
 pub mod no_useless_concat;
@@ -70,7 +70,9 @@ pub mod require_await;
 
 /// All built-in rules, in the order they should be listed in `lens rules`.
 /// Uses default thresholds.
-pub fn all_rules() -> Vec<Box<dyn Rule>> { all_rules_with(&Default::default()) }
+pub fn all_rules() -> Vec<Box<dyn Rule>> {
+    all_rules_with(&Default::default())
+}
 
 /// All built-in rules, configured with the user's thresholds from
 /// `[rules]` in `quality-gate.toml`.
@@ -119,8 +121,14 @@ pub fn all_rules_with(cfg: &crate::config::RulesConfig) -> Vec<Box<dyn Rule>> {
         Box::new(no_await_in_loop::NoAwaitInLoop),
         Box::new(default_case::DefaultCase),
         // Metrics-based (configurable thresholds)
-        Box::new(max_function_lines::MaxFunctionLines::with_threshold(cfg.max_function_lines)),
-        Box::new(max_function_complexity::MaxFunctionComplexity::with_threshold(cfg.max_function_complexity)),
+        Box::new(max_function_lines::MaxFunctionLines::with_threshold(
+            cfg.max_function_lines,
+        )),
+        Box::new(
+            max_function_complexity::MaxFunctionComplexity::with_threshold(
+                cfg.max_function_complexity,
+            ),
+        ),
         Box::new(max_params::MaxParams::with_threshold(cfg.max_params)),
         // Style
         Box::new(no_var::NoVar),
@@ -145,7 +153,9 @@ pub fn all_rules_with(cfg: &crate::config::RulesConfig) -> Vec<Box<dyn Rule>> {
         Box::new(quote_props::QuoteProps),
         Box::new(no_warning_comments::NoWarningComments),
         // Tooling (configurable thresholds)
-        Box::new(no_magic_numbers::NoMagicNumbers::with_min_value(cfg.no_magic_numbers_min)),
+        Box::new(no_magic_numbers::NoMagicNumbers::with_min_value(
+            cfg.no_magic_numbers_min,
+        )),
         Box::new(no_console::NoConsole),
         Box::new(no_new_buffer::NoNewBuffer),
     ];
@@ -153,4 +163,3 @@ pub fn all_rules_with(cfg: &crate::config::RulesConfig) -> Vec<Box<dyn Rule>> {
     rules.retain(|r| !disabled.contains(r.id()));
     rules
 }
-

@@ -12,28 +12,50 @@ pub struct MaxFunctionLines {
 }
 
 impl Default for MaxFunctionLines {
-    fn default() -> Self { Self { threshold: 50 } }
+    fn default() -> Self {
+        Self { threshold: 50 }
+    }
 }
 
 impl MaxFunctionLines {
-    pub fn with_threshold(threshold: u32) -> Self { Self { threshold } }
+    pub fn with_threshold(threshold: u32) -> Self {
+        Self { threshold }
+    }
 }
 
 impl Rule for MaxFunctionLines {
-    fn id(&self) -> &'static str { "max-function-lines" }
-    fn name(&self) -> &'static str { "Function too long" }
+    fn id(&self) -> &'static str {
+        "max-function-lines"
+    }
+    fn name(&self) -> &'static str {
+        "Function too long"
+    }
     fn description(&self) -> &'static str {
         "Functions longer than the configured threshold are hard to read and test. Consider splitting."
     }
-    fn default_severity(&self) -> Severity { Severity::Major }
-    fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
+    fn default_severity(&self) -> Severity {
+        Severity::Major
+    }
+    fn languages(&self) -> &[Language] {
+        &[
+            Language::TypeScript,
+            Language::Tsx,
+            Language::JavaScript,
+            Language::Jsx,
+        ]
+    }
 
     fn check(&self, file: &FileAnalysis, _source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
-        if !matches!(file.language, Some(Language::TypeScript) | Some(Language::Tsx)) {
+        if !matches!(
+            file.language,
+            Some(Language::TypeScript) | Some(Language::Tsx)
+        ) {
             return issues;
         }
-        let Some(metrics) = &file.metrics else { return issues };
+        let Some(metrics) = &file.metrics else {
+            return issues;
+        };
         for func in &metrics.functions {
             let len = func.end_line.saturating_sub(func.start_line) + 1;
             if len > self.threshold {

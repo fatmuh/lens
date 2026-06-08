@@ -116,7 +116,10 @@ impl std::fmt::Debug for RuleRegistry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RuleRegistry")
             .field("count", &self.rules.len())
-            .field("ids", &self.rules.iter().map(|r| r.id()).collect::<Vec<_>>())
+            .field(
+                "ids",
+                &self.rules.iter().map(|r| r.id()).collect::<Vec<_>>(),
+            )
             .finish()
     }
 }
@@ -181,7 +184,13 @@ mod tests {
 
     #[test]
     fn severity_round_trip() {
-        for s in [Severity::Blocker, Severity::Critical, Severity::Major, Severity::Minor, Severity::Info] {
+        for s in [
+            Severity::Blocker,
+            Severity::Critical,
+            Severity::Major,
+            Severity::Minor,
+            Severity::Info,
+        ] {
             assert_eq!(Severity::from_str(s.as_str()), Some(s));
         }
         assert_eq!(Severity::from_str("unknown"), None);
@@ -190,7 +199,10 @@ mod tests {
     #[test]
     fn registry_default_has_rules() {
         let reg = RuleRegistry::default_registry();
-        assert!(!reg.rules().is_empty(), "default registry should have rules");
+        assert!(
+            !reg.rules().is_empty(),
+            "default registry should have rules"
+        );
     }
 
     #[test]

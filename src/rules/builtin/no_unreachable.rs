@@ -1,8 +1,6 @@
 //! `no-unreachable` — flags statements after `return`, `throw`, `break`,
 //! `continue` in the same block.
 
-use tree_sitter::Node;
-
 use crate::analyzer::FileAnalysis;
 use crate::rules::{Issue, Rule, Severity};
 use crate::scanner::language::Language;
@@ -10,20 +8,37 @@ use crate::scanner::language::Language;
 pub struct NoUnreachable;
 
 impl Rule for NoUnreachable {
-    fn id(&self) -> &'static str { "no-unreachable" }
-    fn name(&self) -> &'static str { "No unreachable code" }
+    fn id(&self) -> &'static str {
+        "no-unreachable"
+    }
+    fn name(&self) -> &'static str {
+        "No unreachable code"
+    }
     fn description(&self) -> &'static str {
         "Code after `return`/`throw`/`break`/`continue` in the same block can never run."
     }
-    fn default_severity(&self) -> Severity { Severity::Critical }
-    fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
+    fn default_severity(&self) -> Severity {
+        Severity::Critical
+    }
+    fn languages(&self) -> &[Language] {
+        &[
+            Language::TypeScript,
+            Language::Tsx,
+            Language::JavaScript,
+            Language::Jsx,
+        ]
+    }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
-        let Some(lang) = file.language else { return issues };
+        let Some(lang) = file.language else {
+            return issues;
+        };
         crate::analyzer::parser::with_parser(lang, source, |tree| {
             crate::analyzer::parser::visit_descendants(tree.root_node(), |node| {
-                if node.kind() != "statement_block" { return; }
+                if node.kind() != "statement_block" {
+                    return;
+                }
                 let mut saw_terminator = false;
                 let mut cursor = node.walk();
                 for child in node.children(&mut cursor) {
@@ -44,8 +59,13 @@ impl Rule for NoUnreachable {
                         // Only report the first unreachable per block.
                         return;
                     }
-                    if matches!(kind, "return_statement" | "throw_statement" | "break_statement"
-                        | "continue_statement") {
+                    if matches!(
+                        kind,
+                        "return_statement"
+                            | "throw_statement"
+                            | "break_statement"
+                            | "continue_statement"
+                    ) {
                         saw_terminator = true;
                     }
                 }
@@ -56,5 +76,8 @@ impl Rule for NoUnreachable {
 }
 
 fn is_brace_or_comment(kind: &str) -> bool {
-    matches!(kind, "{" | "}" | "(" | ")" | "[" | "]" | "comment" | "ERROR")
+    matches!(
+        kind,
+        "{" | "}" | "(" | ")" | "[" | "]" | "comment" | "ERROR"
+    )
 }

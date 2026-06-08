@@ -17,8 +17,7 @@ pub struct Token {
 }
 
 /// Match an identifier (incl. `$` and `_`).
-static RE_IDENT: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"[A-Za-z_$][A-Za-z0-9_$]*").unwrap());
+static RE_IDENT: Lazy<Regex> = Lazy::new(|| Regex::new(r"[A-Za-z_$][A-Za-z0-9_$]*").unwrap());
 
 /// Tokenize `source` into a flat stream. Comments and string literals are
 /// stripped (but their newlines are preserved so line numbers stay aligned).
@@ -68,7 +67,8 @@ pub fn tokenize(source: &str) -> Vec<Token> {
         if c.is_ascii_digit() {
             let start = idx;
             while idx < bytes.len()
-                && (cleaned.as_bytes()[idx].is_ascii_alphanumeric() || cleaned.as_bytes()[idx] == b'.')
+                && (cleaned.as_bytes()[idx].is_ascii_alphanumeric()
+                    || cleaned.as_bytes()[idx] == b'.')
             {
                 idx += 1;
             }

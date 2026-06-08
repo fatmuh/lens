@@ -8,7 +8,7 @@
 //! This mirrors (a subset of) SonarQube's new-code period tracking.
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
@@ -150,8 +150,12 @@ pub struct TrackedResult {
 /// True if `path` was modified within the last `days` days.
 /// Used by `--since-days` to filter to recently-changed code.
 pub fn modified_within_days(path: &Path, days: u32) -> bool {
-    let Ok(meta) = std::fs::metadata(path) else { return false; };
-    let Ok(modified) = meta.modified() else { return false; };
+    let Ok(meta) = std::fs::metadata(path) else {
+        return false;
+    };
+    let Ok(modified) = meta.modified() else {
+        return false;
+    };
     let Ok(elapsed) = std::time::SystemTime::now().duration_since(modified) else {
         return false;
     };
@@ -161,10 +165,13 @@ pub fn modified_within_days(path: &Path, days: u32) -> bool {
 
 /// Apply the snapshot to a list of issues, returning tracked results.
 pub fn track_issues(snapshot: &Snapshot, issues: Vec<Issue>) -> Vec<TrackedResult> {
-    issues.into_iter().map(|issue| {
-        let status = snapshot.classify_issue(&issue);
-        TrackedResult { issue, status }
-    }).collect()
+    issues
+        .into_iter()
+        .map(|issue| {
+            let status = snapshot.classify_issue(&issue);
+            TrackedResult { issue, status }
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -196,15 +203,18 @@ mod tests {
     fn unchanged_file_keeps_issue_persistent() {
         let mut snap = Snapshot::default();
         let key = Snapshot::issue_key(&fake_issue("no-eval", 10, "msg"));
-        snap.files.insert("src/foo.ts".to_string(), FileSnapshot {
-            hash: "abc123".to_string(),
-            issues: vec![TrackedIssue {
-                key: key.clone(),
-                rule_id: "no-eval".into(),
-                line: 10,
-                message: "msg".into(),
-            }],
-        });
+        snap.files.insert(
+            "src/foo.ts".to_string(),
+            FileSnapshot {
+                hash: "abc123".to_string(),
+                issues: vec![TrackedIssue {
+                    key: key.clone(),
+                    rule_id: "no-eval".into(),
+                    line: 10,
+                    message: "msg".into(),
+                }],
+            },
+        );
         let issue = fake_issue("no-eval", 10, "msg");
         assert_eq!(snap.classify_issue(&issue), IssueStatus::Persistent);
     }
@@ -212,31 +222,40 @@ mod tests {
     #[test]
     fn changed_file_marks_old_issue_fixed() {
         let mut snap = Snapshot::default();
-        snap.files.insert("src/foo.ts".to_string(), FileSnapshot {
-            hash: "oldhash".to_string(),
-            issues: vec![TrackedIssue {
-                key: "no-eval:10:deadbeef".into(),
-                rule_id: "no-eval".into(),
-                line: 10,
-                message: "msg".into(),
-            }],
-        });
+        snap.files.insert(
+            "src/foo.ts".to_string(),
+            FileSnapshot {
+                hash: "oldhash".to_string(),
+                issues: vec![TrackedIssue {
+                    key: "no-eval:10:deadbeef".into(),
+                    rule_id: "no-eval".into(),
+                    line: 10,
+                    message: "msg".into(),
+                }],
+            },
+        );
         // File hash changed → the old issue is "fixed" (no longer produced).
-        assert_eq!(snap.classify_file("src/foo.ts", "newhash"), FileStatus::Changed);
+        assert_eq!(
+            snap.classify_file("src/foo.ts", "newhash"),
+            FileStatus::Changed
+        );
     }
 
     #[test]
     fn new_issue_in_existing_file_is_regressed() {
         let mut snap = Snapshot::default();
-        snap.files.insert("src/foo.ts".to_string(), FileSnapshot {
-            hash: "same".to_string(),
-            issues: vec![TrackedIssue {
-                key: "no-eval:5:abc".into(),
-                rule_id: "no-eval".into(),
-                line: 5,
-                message: "old".into(),
-            }],
-        });
+        snap.files.insert(
+            "src/foo.ts".to_string(),
+            FileSnapshot {
+                hash: "same".to_string(),
+                issues: vec![TrackedIssue {
+                    key: "no-eval:5:abc".into(),
+                    rule_id: "no-eval".into(),
+                    line: 5,
+                    message: "old".into(),
+                }],
+            },
+        );
         let new_issue = fake_issue("no-eqeqeq", 20, "new msg");
         assert_eq!(snap.classify_issue(&new_issue), IssueStatus::Regressed);
     }

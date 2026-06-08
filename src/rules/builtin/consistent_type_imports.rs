@@ -10,32 +10,52 @@ use crate::scanner::language::Language;
 pub struct ConsistentTypeImports;
 
 impl Rule for ConsistentTypeImports {
-    fn id(&self) -> &'static str { "consistent-type-imports" }
-    fn name(&self) -> &'static str { "Use `import type`" }
+    fn id(&self) -> &'static str {
+        "consistent-type-imports"
+    }
+    fn name(&self) -> &'static str {
+        "Use `import type`"
+    }
     fn description(&self) -> &'static str {
         "Use `import type { Foo }` for type-only imports. Helps bundlers strip types."
     }
-    fn default_severity(&self) -> Severity { Severity::Minor }
-    fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx] }
+    fn default_severity(&self) -> Severity {
+        Severity::Minor
+    }
+    fn languages(&self) -> &[Language] {
+        &[Language::TypeScript, Language::Tsx]
+    }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
-        let Some(lang) = file.language else { return issues };
-        if !matches!(lang, Language::TypeScript | Language::Tsx) { return issues; }
+        let Some(lang) = file.language else {
+            return issues;
+        };
+        if !matches!(lang, Language::TypeScript | Language::Tsx) {
+            return issues;
+        }
         crate::analyzer::parser::with_parser(lang, source, |tree| {
             // First: build a set of names used as values (vs only as types).
-            let mut used_as_value: std::collections::HashSet<String> = std::collections::HashSet::new();
+            let mut used_as_value: std::collections::HashSet<String> =
+                std::collections::HashSet::new();
             crate::analyzer::parser::visit_descendants(tree.root_node(), |node| {
                 // Track identifier usage outside of import statements and
                 // type positions. We use a rough heuristic: any reference
                 // outside an import_statement or type_annotation is a use.
-                if node.kind() == "import_statement" || node.kind() == "type_annotation"
-                    || node.kind() == "type_identifier" || node.kind() == "predefined_type"
-                    || node.kind() == "generic_type" { return; }
+                if node.kind() == "import_statement"
+                    || node.kind() == "type_annotation"
+                    || node.kind() == "type_identifier"
+                    || node.kind() == "predefined_type"
+                    || node.kind() == "generic_type"
+                {
+                    return;
+                }
                 if matches!(node.kind(), "identifier" | "property_identifier") {
                     if let Some(parent) = node.parent() {
                         // Don't count the LHS of an import_clause.
-                        if parent.kind() == "import_clause" { return; }
+                        if parent.kind() == "import_clause" {
+                            return;
+                        }
                     }
                     if let Ok(text) = node.utf8_text(source.as_bytes()) {
                         used_as_value.insert(text.to_string());
@@ -46,7 +66,9 @@ impl Rule for ConsistentTypeImports {
             // Now: walk import statements, find each imported name, and if
             // it's NOT used as a value, suggest `import type`.
             crate::analyzer::parser::visit_descendants(tree.root_node(), |node| {
-                if node.kind() != "import_statement" { return; }
+                if node.kind() != "import_statement" {
+                    return;
+                }
                 if let Some(text) = node.child_by_field_name("type") {
                     let _ = text; // already has `type` keyword
                     return;
@@ -64,9 +86,13 @@ impl Rule for ConsistentTypeImports {
     }
 }
 
-fn walk_import_clause(clause: Node, file: &FileAnalysis, source: &str,
+fn walk_import_clause(
+    clause: Node,
+    file: &FileAnalysis,
+    source: &str,
     used_as_value: &std::collections::HashSet<String>,
-    issues: &mut Vec<Issue>) {
+    issues: &mut Vec<Issue>,
+) {
     let mut cursor = clause.walk();
     for c in clause.children(&mut cursor) {
         if c.kind() == "named_imports" {
@@ -81,7 +107,10 @@ fn walk_import_clause(clause: Node, file: &FileAnalysis, source: &str,
                                 issues.push(Issue {
                                     rule_id: "consistent-type-imports".into(),
                                     severity: Severity::Minor,
-                                    message: format!("`{}` is only used as a type; use `import type`.", text),
+                                    message: format!(
+                                        "`{}` is only used as a type; use `import type`.",
+                                        text
+                                    ),
                                     file: file.path.clone(),
                                     start_line: start.row as u32 + 1,
                                     end_line: end.row as u32 + 1,

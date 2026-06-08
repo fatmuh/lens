@@ -11,27 +11,52 @@ use crate::scanner::language::Language;
 pub struct NoAsyncPromiseExecutor;
 
 impl Rule for NoAsyncPromiseExecutor {
-    fn id(&self) -> &'static str { "no-async-promise-executor" }
-    fn name(&self) -> &'static str { "No async Promise executor" }
+    fn id(&self) -> &'static str {
+        "no-async-promise-executor"
+    }
+    fn name(&self) -> &'static str {
+        "No async Promise executor"
+    }
     fn description(&self) -> &'static str {
         "`new Promise(async ...)` runs the executor sync; errors become unhandled rejections."
     }
-    fn default_severity(&self) -> Severity { Severity::Critical }
-    fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
+    fn default_severity(&self) -> Severity {
+        Severity::Critical
+    }
+    fn languages(&self) -> &[Language] {
+        &[
+            Language::TypeScript,
+            Language::Tsx,
+            Language::JavaScript,
+            Language::Jsx,
+        ]
+    }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
-        let Some(lang) = file.language else { return issues };
+        let Some(lang) = file.language else {
+            return issues;
+        };
         crate::analyzer::parser::with_parser(lang, source, |tree| {
             crate::analyzer::parser::visit_descendants(tree.root_node(), |node| {
-                if node.kind() != "new_expression" { return; }
-                let Some(ctor) = node.child_by_field_name("constructor") else { return; };
-                let Ok(ctor_text) = ctor.utf8_text(source.as_bytes()) else { return; };
-                if ctor_text != "Promise" { return; }
+                if node.kind() != "new_expression" {
+                    return;
+                }
+                let Some(ctor) = node.child_by_field_name("constructor") else {
+                    return;
+                };
+                let Ok(ctor_text) = ctor.utf8_text(source.as_bytes()) else {
+                    return;
+                };
+                if ctor_text != "Promise" {
+                    return;
+                }
                 // The text of the new expression contains "async" if and
                 // only if its first argument is an async function. Cheap
                 // and robust (avoids brittle AST shape assumptions).
-                let Ok(text) = node.utf8_text(source.as_bytes()) else { return; };
+                let Ok(text) = node.utf8_text(source.as_bytes()) else {
+                    return;
+                };
                 // Strip the leading "new Promise" and any wrapping paren.
                 let stripped = text
                     .trim_start_matches("new Promise")
@@ -59,5 +84,7 @@ impl Rule for NoAsyncPromiseExecutor {
 }
 
 fn child_text_contains(node: Node, needle: &str, source: &str) -> bool {
-    node.utf8_text(source.as_bytes()).map(|t| t.contains(needle)).unwrap_or(false)
+    node.utf8_text(source.as_bytes())
+        .map(|t| t.contains(needle))
+        .unwrap_or(false)
 }

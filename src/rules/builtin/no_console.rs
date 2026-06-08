@@ -11,22 +11,33 @@ use crate::rules::{Issue, Rule, Severity};
 pub struct NoConsole;
 
 impl Rule for NoConsole {
-    fn id(&self) -> &'static str { "no-console" }
-    fn name(&self) -> &'static str { "No `console.*` calls" }
+    fn id(&self) -> &'static str {
+        "no-console"
+    }
+    fn name(&self) -> &'static str {
+        "No `console.*` calls"
+    }
     fn description(&self) -> &'static str {
         "Avoid using `console.log` etc. in production code. Use a proper logger."
     }
-    fn default_severity(&self) -> Severity { Severity::Minor }
+    fn default_severity(&self) -> Severity {
+        Severity::Minor
+    }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         // Skip test files — logging is expected there.
         let path_str = file.path.to_string_lossy();
-        if is_test_file(&file.path) || path_str.contains(".spec.") || path_str.contains(".test.")
-            || path_str.contains("__tests__") {
+        if is_test_file(&file.path)
+            || path_str.contains(".spec.")
+            || path_str.contains(".test.")
+            || path_str.contains("__tests__")
+        {
             return Vec::new();
         }
         let mut issues = Vec::new();
-        let Some(lang) = file.language else { return issues };
+        let Some(lang) = file.language else {
+            return issues;
+        };
         crate::analyzer::parser::with_parser(lang, source, |tree| {
             crate::analyzer::parser::visit_descendants(tree.root_node(), |node| {
                 if node.kind() == "call_expression" {
@@ -53,8 +64,10 @@ impl Rule for NoConsole {
 
 fn is_test_file(path: &Path) -> bool {
     let s = path.to_string_lossy();
-    s.ends_with(".test.ts") || s.ends_with(".test.tsx")
-        || s.ends_with(".spec.ts") || s.ends_with(".spec.tsx")
+    s.ends_with(".test.ts")
+        || s.ends_with(".test.tsx")
+        || s.ends_with(".spec.ts")
+        || s.ends_with(".spec.tsx")
         || s.contains("__tests__/")
 }
 

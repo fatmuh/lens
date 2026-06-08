@@ -32,7 +32,8 @@ pub fn scan(root: &Path, cfg: &ScanConfig, no_gitignore: bool) -> Result<Vec<Pat
     } else {
         Vec::new()
     };
-    let lensignore_globs = build_globset(&lensignore_patterns).context("building .lensignore globs")?;
+    let lensignore_globs =
+        build_globset(&lensignore_patterns).context("building .lensignore globs")?;
 
     let mut walker = WalkBuilder::new(root);
     walker
@@ -62,7 +63,11 @@ pub fn scan(root: &Path, cfg: &ScanConfig, no_gitignore: bool) -> Result<Vec<Pat
         }
 
         let path = entry.path().to_path_buf();
-        let rel = path.strip_prefix(root).unwrap_or(&path).to_string_lossy().replace('\\', "/");
+        let rel = path
+            .strip_prefix(root)
+            .unwrap_or(&path)
+            .to_string_lossy()
+            .replace('\\', "/");
 
         // Include whitelist (if defined).
         if let Some(set) = &include {

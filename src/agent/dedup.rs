@@ -64,8 +64,7 @@ pub async fn fix_duplicates(
         // Read the first occurrence as the "original".
         let first = &block.locations[0];
         let first_path = project_root.join(&first.file);
-        let source = std::fs::read_to_string(&first_path)
-            .context("reading source file")?;
+        let source = std::fs::read_to_string(&first_path).context("reading source file")?;
 
         let system_prompt = build_dedup_system_prompt();
         let user_prompt = format!(
@@ -84,7 +83,8 @@ pub async fn fix_duplicates(
             first.start_line,
             first.end_line,
             block.snippet,
-            block.locations[1..].iter()
+            block.locations[1..]
+                .iter()
                 .map(|l| format!("  - {} (lines {}-{})", l.file, l.start_line, l.end_line))
                 .collect::<Vec<_>>()
                 .join("\n"),
@@ -140,16 +140,15 @@ struct DupLocation {
 
 fn run_duplication_scan(root: &Path) -> Result<String> {
     // Run `lens scan --format json` and capture output.
-    let output = std::process::Command::new(
-        std::env::current_exe().context("getting current exe path")?
-    )
-        .arg("scan")
-        .arg(root)
-        .arg("--format")
-        .arg("json")
-        .arg("--quiet")
-        .output()
-        .context("running lens scan")?;
+    let output =
+        std::process::Command::new(std::env::current_exe().context("getting current exe path")?)
+            .arg("scan")
+            .arg(root)
+            .arg("--format")
+            .arg("json")
+            .arg("--quiet")
+            .output()
+            .context("running lens scan")?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     Ok(stdout)
@@ -158,9 +157,10 @@ fn run_duplication_scan(root: &Path) -> Result<String> {
 fn parse_duplication_report(json: &str, min_lines: usize) -> Result<Vec<DupBlock>> {
     // Parse the JSON output from lens scan.
     let start = json.find('{').unwrap_or(0);
-    let val: serde_json::Value = serde_json::from_str(&json[start..])
-        .context("parsing scan output")?;
-    let dup = val.get("duplication")
+    let val: serde_json::Value =
+        serde_json::from_str(&json[start..]).context("parsing scan output")?;
+    let dup = val
+        .get("duplication")
         .and_then(|d| d.get("blocks"))
         .cloned()
         .unwrap_or(serde_json::Value::Null);
@@ -168,17 +168,20 @@ fn parse_duplication_report(json: &str, min_lines: usize) -> Result<Vec<DupBlock
     let mut blocks = Vec::new();
     if let Some(arr) = dup.as_array() {
         for (i, block) in arr.iter().enumerate() {
-            let line_count = block.get("line_count")
+            let line_count = block
+                .get("line_count")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0) as usize;
             if line_count < min_lines {
                 continue;
             }
-            let snippet = block.get("snippet")
+            let snippet = block
+                .get("snippet")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let locations: Vec<DupLocation> = block.get("locations")
+            let locations: Vec<DupLocation> = block
+                .get("locations")
                 .and_then(|v| v.as_array())
                 .cloned()
                 .unwrap_or_default()
@@ -215,7 +218,8 @@ fn build_dedup_system_prompt() -> String {
      4. Keep the same function signature and return type\n\
      5. Place shared utilities in src/utils/\n\
      6. Output each file clearly labeled with its path\n\
-     7. Use the format: === FILE: path/to/file.ts === followed by the content".to_string()
+     7. Use the format: === FILE: path/to/file.ts === followed by the content"
+        .to_string()
 }
 
 fn parse_multi_file_response(response: &str) -> Vec<(String, String)> {

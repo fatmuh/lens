@@ -49,9 +49,12 @@ impl AiConfig {
             .context("LENS_AI_API_KEY environment variable is required for AI features")?;
         let base_url = std::env::var("LENS_AI_BASE_URL")
             .unwrap_or_else(|_| "https://api.openai.com/v1".to_string());
-        let model = std::env::var("LENS_AI_MODEL")
-            .unwrap_or_else(|_| "gpt-4o".to_string());
-        Ok(Self { api_key, base_url, model })
+        let model = std::env::var("LENS_AI_MODEL").unwrap_or_else(|_| "gpt-4o".to_string());
+        Ok(Self {
+            api_key,
+            base_url,
+            model,
+        })
     }
 
     /// Check if AI is configured (API key present).
@@ -68,8 +71,14 @@ pub async fn chat(config: &AiConfig, system: &str, user: &str) -> Result<String>
     let req = ChatRequest {
         model: config.model.clone(),
         messages: vec![
-            Message { role: "system".into(), content: system.into() },
-            Message { role: "user".into(), content: user.into() },
+            Message {
+                role: "system".into(),
+                content: system.into(),
+            },
+            Message {
+                role: "user".into(),
+                content: user.into(),
+            },
         ],
         temperature: 0.2, // Low temperature for deterministic code generation
         max_tokens: 4096,

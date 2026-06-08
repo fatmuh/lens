@@ -12,7 +12,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
     long_about = "Lens scans your project for code issues, duplication, and coverage. \
                   It honors `.gitignore`/`.lensignore`, supports include/exclude patterns, \
                   and respects `NOSONAR` comments.",
-    propagate_version = true,
+    propagate_version = true
 )]
 pub struct Cli {
     /// Path to config file (default: `quality-gate.toml` in scan root or current dir).
@@ -226,7 +226,6 @@ impl Format {
     }
 }
 
-
 #[derive(Debug, Args)]
 pub struct FixArgs {
     /// Directory to fix (default: current dir).
@@ -246,7 +245,11 @@ pub struct FixArgs {
     pub max_files: usize,
 
     /// OpenAI-compatible API base URL.
-    #[arg(long, env = "LENS_AI_BASE_URL", default_value = "https://api.openai.com/v1")]
+    #[arg(
+        long,
+        env = "LENS_AI_BASE_URL",
+        default_value = "https://api.openai.com/v1"
+    )]
     pub ai_base_url: String,
 
     /// AI model to use.
@@ -273,7 +276,11 @@ pub struct WatchArgs {
     pub debounce_ms: u64,
 
     /// OpenAI-compatible API base URL.
-    #[arg(long, env = "LENS_AI_BASE_URL", default_value = "https://api.openai.com/v1")]
+    #[arg(
+        long,
+        env = "LENS_AI_BASE_URL",
+        default_value = "https://api.openai.com/v1"
+    )]
     pub ai_base_url: String,
 
     /// AI model to use.
@@ -287,7 +294,6 @@ pub enum AgentMode {
     Dedup,
     All,
 }
-
 
 #[derive(Debug, Args)]
 pub struct TestArgs {

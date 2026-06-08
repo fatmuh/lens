@@ -11,17 +11,32 @@ use crate::scanner::language::Language;
 pub struct PreferConst;
 
 impl Rule for PreferConst {
-    fn id(&self) -> &'static str { "prefer-const" }
-    fn name(&self) -> &'static str { "Prefer `const`" }
+    fn id(&self) -> &'static str {
+        "prefer-const"
+    }
+    fn name(&self) -> &'static str {
+        "Prefer `const`"
+    }
     fn description(&self) -> &'static str {
         "Use `const` for variables that are never reassigned after declaration."
     }
-    fn default_severity(&self) -> Severity { Severity::Minor }
-    fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
+    fn default_severity(&self) -> Severity {
+        Severity::Minor
+    }
+    fn languages(&self) -> &[Language] {
+        &[
+            Language::TypeScript,
+            Language::Tsx,
+            Language::JavaScript,
+            Language::Jsx,
+        ]
+    }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
-        let Some(lang) = file.language else { return issues };
+        let Some(lang) = file.language else {
+            return issues;
+        };
         crate::analyzer::parser::with_parser(lang, source, |tree| {
             let root = tree.root_node();
             // For each `let` declaration, check whether the binding name is
@@ -64,7 +79,10 @@ impl Rule for PreferConst {
                     issues.push(Issue {
                         rule_id: "prefer-const".into(),
                         severity: Severity::Minor,
-                        message: format!("`{}` is never reassigned; use `const` instead of `let`.", name),
+                        message: format!(
+                            "`{}` is never reassigned; use `const` instead of `let`.",
+                            name
+                        ),
                         file: file.path.clone(),
                         start_line: start.row as u32 + 1,
                         end_line: start.row as u32 + 1,

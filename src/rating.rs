@@ -39,11 +39,17 @@ pub enum Rating {
 impl Rating {
     /// Map a percentage (0-100) to a rating letter.
     pub fn from_percent(p: f64) -> Self {
-        if p < 5.0 { Self::A }
-        else if p < 10.0 { Self::B }
-        else if p < 20.0 { Self::C }
-        else if p < 50.0 { Self::D }
-        else { Self::E }
+        if p < 5.0 {
+            Self::A
+        } else if p < 10.0 {
+            Self::B
+        } else if p < 20.0 {
+            Self::C
+        } else if p < 50.0 {
+            Self::D
+        } else {
+            Self::E
+        }
     }
 
     pub fn as_str(self) -> &'static str {
@@ -59,11 +65,11 @@ impl Rating {
     /// ANSI color for terminal display.
     pub fn ansi(self) -> &'static str {
         match self {
-            Self::A => "\x1b[32m",  // green
-            Self::B => "\x1b[36m",  // cyan
-            Self::C => "\x1b[33m",  // yellow
-            Self::D => "\x1b[31m",  // red
-            Self::E => "\x1b[35m",  // magenta
+            Self::A => "\x1b[32m", // green
+            Self::B => "\x1b[36m", // cyan
+            Self::C => "\x1b[33m", // yellow
+            Self::D => "\x1b[31m", // red
+            Self::E => "\x1b[35m", // magenta
         }
     }
 }
@@ -75,15 +81,33 @@ pub fn compute_ratings(files: &[FileAnalysis]) -> (Rating, Rating, Rating) {
         return (Rating::A, Rating::A, Rating::A);
     }
     let total_f = total as f64;
-    let reliability = files.iter().filter(|f| {
-        f.issues.iter().any(|i| matches!(i.severity, Severity::Blocker | Severity::Critical))
-    }).count();
-    let security = files.iter().filter(|f| {
-        f.issues.iter().any(|i| matches!(i.severity, Severity::Blocker))
-    }).count();
-    let maintainability = files.iter().filter(|f| {
-        f.issues.iter().any(|i| matches!(i.severity, Severity::Major | Severity::Critical | Severity::Blocker))
-    }).count();
+    let reliability = files
+        .iter()
+        .filter(|f| {
+            f.issues
+                .iter()
+                .any(|i| matches!(i.severity, Severity::Blocker | Severity::Critical))
+        })
+        .count();
+    let security = files
+        .iter()
+        .filter(|f| {
+            f.issues
+                .iter()
+                .any(|i| matches!(i.severity, Severity::Blocker))
+        })
+        .count();
+    let maintainability = files
+        .iter()
+        .filter(|f| {
+            f.issues.iter().any(|i| {
+                matches!(
+                    i.severity,
+                    Severity::Major | Severity::Critical | Severity::Blocker
+                )
+            })
+        })
+        .count();
     (
         Rating::from_percent((reliability as f64 / total_f) * 100.0),
         Rating::from_percent((security as f64 / total_f) * 100.0),
@@ -104,16 +128,20 @@ mod tests {
             metrics: None,
             tokens: None,
             nosonar_count: 0,
-            issues: sevs.iter().enumerate().map(|(i, s)| crate::rules::Issue {
-                rule_id: format!("test-{}", i),
-                severity: *s,
-                message: "test".into(),
-                file: PathBuf::from("test.ts"),
-                start_line: 1,
-                end_line: 1,
-                start_column: 0,
-                end_column: 0,
-            }).collect(),
+            issues: sevs
+                .iter()
+                .enumerate()
+                .map(|(i, s)| crate::rules::Issue {
+                    rule_id: format!("test-{}", i),
+                    severity: *s,
+                    message: "test".into(),
+                    file: PathBuf::from("test.ts"),
+                    start_line: 1,
+                    end_line: 1,
+                    start_column: 0,
+                    end_column: 0,
+                })
+                .collect(),
         }
     }
 
@@ -157,8 +185,8 @@ mod tests {
             .collect();
         files.push(file_with_severities(&[Severity::Blocker]));
         let (r, s, m) = compute_ratings(&files);
-        assert_eq!(r, Rating::B);  // 1/20 = 5.0% → B
-        assert_eq!(s, Rating::B);  // 1/20 = 5.0% → B
-        assert_eq!(m, Rating::E);  // 20/20 = 100% → E
+        assert_eq!(r, Rating::B); // 1/20 = 5.0% → B
+        assert_eq!(s, Rating::B); // 1/20 = 5.0% → B
+        assert_eq!(m, Rating::E); // 20/20 = 100% → E
     }
 }

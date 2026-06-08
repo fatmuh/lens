@@ -72,7 +72,10 @@ pub struct NosonarConfig {
 
 impl Default for NosonarConfig {
     fn default() -> Self {
-        Self { enabled: true, custom_markers: Vec::new() }
+        Self {
+            enabled: true,
+            custom_markers: Vec::new(),
+        }
     }
 }
 
@@ -348,7 +351,10 @@ pub struct HtmlConfig {
 
 impl Default for HtmlConfig {
     fn default() -> Self {
-        Self { output: PathBuf::from("lens-report"), open_browser: false }
+        Self {
+            output: PathBuf::from("lens-report"),
+            open_browser: false,
+        }
     }
 }
 
@@ -377,8 +383,8 @@ impl Config {
 
         let text = std::fs::read_to_string(path)
             .with_context(|| format!("reading config: {}", path.display()))?;
-        let cfg: Self = toml::from_str(&text)
-            .with_context(|| format!("parsing config: {}", path.display()))?;
+        let cfg: Self =
+            toml::from_str(&text).with_context(|| format!("parsing config: {}", path.display()))?;
         Ok(cfg)
     }
 
@@ -388,7 +394,11 @@ impl Config {
             return Some(p.to_path_buf());
         }
         let candidate = scan_root.join(CONFIG_FILENAME);
-        if candidate.exists() { Some(candidate) } else { None }
+        if candidate.exists() {
+            Some(candidate)
+        } else {
+            None
+        }
     }
 }
 
@@ -424,10 +434,25 @@ mod tests {
     #[test]
     fn test_significant_code() {
         let cfg = SignificantCodeConfig::default();
-        assert!(!cfg.is_significant("copy.spec.ts"), "spec file should not be significant");
-        assert!(!cfg.is_significant("src/foo.test.ts"), "test file should not be significant");
-        assert!(!cfg.is_significant("src/foo.d.ts"), ".d.ts should not be significant");
-        assert!(cfg.is_significant("src/service.ts"), "production code should be significant");
-        assert!(cfg.is_significant("src/utils.ts"), "production code should be significant");
+        assert!(
+            !cfg.is_significant("copy.spec.ts"),
+            "spec file should not be significant"
+        );
+        assert!(
+            !cfg.is_significant("src/foo.test.ts"),
+            "test file should not be significant"
+        );
+        assert!(
+            !cfg.is_significant("src/foo.d.ts"),
+            ".d.ts should not be significant"
+        );
+        assert!(
+            cfg.is_significant("src/service.ts"),
+            "production code should be significant"
+        );
+        assert!(
+            cfg.is_significant("src/utils.ts"),
+            "production code should be significant"
+        );
     }
 }

@@ -256,7 +256,10 @@ pub fn detect_sonar(
     let per_file: Vec<(PathBuf, Vec<(u32, String)>)> = files
         .iter()
         .map(|(path, tokens)| {
-            (path.clone(), tokens_to_statement_values(tokens, normalize_identifiers))
+            (
+                path.clone(),
+                tokens_to_statement_values(tokens, normalize_identifiers),
+            )
         })
         .collect();
     let total_lines: u64 = per_file.iter().map(|(_, s)| s.len() as u64).sum();
@@ -445,10 +448,7 @@ pub fn detect_sonar(
 /// text into a single "statement" value. Empty lines (no tokens) are
 /// dropped. When `normalize_identifiers` is true, identifier-like tokens
 /// are replaced with `"@id"`.
-fn tokens_to_statement_values(
-    tokens: &[Token],
-    normalize_identifiers: bool,
-) -> Vec<(u32, String)> {
+fn tokens_to_statement_values(tokens: &[Token], normalize_identifiers: bool) -> Vec<(u32, String)> {
     let mut by_line: BTreeMap<u32, Vec<&Token>> = BTreeMap::new();
     for tok in tokens {
         by_line.entry(tok.line).or_default().push(tok);
@@ -582,12 +582,7 @@ fn winnow_indices(hashes: &[u64], window: usize) -> Vec<usize> {
         return vec![];
     }
     if hashes.len() <= window {
-        let min_idx = hashes
-            .iter()
-            .enumerate()
-            .min_by_key(|(_, h)| *h)
-            .unwrap()
-            .0;
+        let min_idx = hashes.iter().enumerate().min_by_key(|(_, h)| *h).unwrap().0;
         return vec![min_idx];
     }
 
@@ -679,9 +674,7 @@ fn find_blocks(
             continue;
         }
 
-        if let Some((start_a, start_b, len)) =
-            longest_common_substring(&f_a.hashes, &f_b.hashes)
-        {
+        if let Some((start_a, start_b, len)) = longest_common_substring(&f_a.hashes, &f_b.hashes) {
             if len >= min_fingerprints {
                 // Token count is the actual span of source tokens covered
                 // by the run (not the dense approximation `k + len - 1`).
@@ -689,34 +682,18 @@ fn find_blocks(
                 let token_a_end = f_a.token_positions[start_a + len - 1] + k - 1;
                 let token_b_start = f_b.token_positions[start_b];
                 let token_b_end = f_b.token_positions[start_b + len - 1] + k - 1;
-                let token_count = (token_a_end - token_a_start + 1)
-                    .max(token_b_end - token_b_start + 1);
+                let token_count =
+                    (token_a_end - token_a_start + 1).max(token_b_end - token_b_start + 1);
 
                 let occ_a = BlockOccurrence {
                     file: f_a.path.clone(),
-                    start_line: f_a
-                        .line_numbers
-                        .get(token_a_start)
-                        .copied()
-                        .unwrap_or(0),
-                    end_line: f_a
-                        .line_numbers
-                        .get(token_a_end)
-                        .copied()
-                        .unwrap_or(0),
+                    start_line: f_a.line_numbers.get(token_a_start).copied().unwrap_or(0),
+                    end_line: f_a.line_numbers.get(token_a_end).copied().unwrap_or(0),
                 };
                 let occ_b = BlockOccurrence {
                     file: f_b.path.clone(),
-                    start_line: f_b
-                        .line_numbers
-                        .get(token_b_start)
-                        .copied()
-                        .unwrap_or(0),
-                    end_line: f_b
-                        .line_numbers
-                        .get(token_b_end)
-                        .copied()
-                        .unwrap_or(0),
+                    start_line: f_b.line_numbers.get(token_b_start).copied().unwrap_or(0),
+                    end_line: f_b.line_numbers.get(token_b_end).copied().unwrap_or(0),
                 };
                 blocks.push(DuplicateBlock {
                     token_count,
@@ -817,16 +794,34 @@ mod tests {
     use super::*;
 
     fn t(text: &str) -> Token {
-        Token { text: text.to_string(), line: 1 }
+        Token {
+            text: text.to_string(),
+            line: 1,
+        }
     }
 
     #[test]
     fn identical_files_detected_as_duplicated() {
         let src = vec![
-            t("function"), t("foo"), t("("), t(")"), t("{"), t("}"),
-            t("function"), t("bar"), t("("), t(")"), t("{"), t("}"),
+            t("function"),
+            t("foo"),
+            t("("),
+            t(")"),
+            t("{"),
+            t("}"),
+            t("function"),
+            t("bar"),
+            t("("),
+            t(")"),
+            t("{"),
+            t("}"),
         ];
-        let dup = detect(&[("a.ts".into(), src.clone()), ("b.ts".into(), src)], 5, 10, 10);
+        let dup = detect(
+            &[("a.ts".into(), src.clone()), ("b.ts".into(), src)],
+            5,
+            10,
+            10,
+        );
         assert!(dup.duplication_percent > 0.0);
         assert_eq!(dup.files_with_duplication, 2);
     }
@@ -874,7 +869,10 @@ mod tests {
     /// Build a `Token` with a specific line number so we can test line-based
     /// grouping.
     fn tl(text: &str, line: u32) -> Token {
-        Token { text: text.to_string(), line }
+        Token {
+            text: text.to_string(),
+            line,
+        }
     }
 
     /// Build N consecutive UNIQUE statements (each different from the
@@ -907,10 +905,14 @@ mod tests {
         );
         assert!(!report.blocks.is_empty());
         // Both files should appear in at least one block.
-        let any_two = report
-            .blocks
-            .iter()
-            .any(|b| b.occurrences.iter().map(|o| &o.file).collect::<std::collections::HashSet<_>>().len() == 2);
+        let any_two = report.blocks.iter().any(|b| {
+            b.occurrences
+                .iter()
+                .map(|o| &o.file)
+                .collect::<std::collections::HashSet<_>>()
+                .len()
+                == 2
+        });
         assert!(any_two, "expected a block to span both files");
     }
 
@@ -960,10 +962,18 @@ mod tests {
     fn sonar_different_content_not_matched() {
         // Two files with different content per line.
         let tokens_a: Vec<Token> = (1..=100)
-            .flat_map(|line| ["const", "a", "=", "1", ";"].iter().map(move |w| tl(w, line)))
+            .flat_map(|line| {
+                ["const", "a", "=", "1", ";"]
+                    .iter()
+                    .map(move |w| tl(w, line))
+            })
             .collect();
         let tokens_b: Vec<Token> = (1..=100)
-            .flat_map(|line| ["const", "b", "=", "2", ";"].iter().map(move |w| tl(w, line)))
+            .flat_map(|line| {
+                ["const", "b", "=", "2", ";"]
+                    .iter()
+                    .map(move |w| tl(w, line))
+            })
             .collect();
         let report = detect_sonar(
             &[("a.ts".into(), tokens_a), ("b.ts".into(), tokens_b)],
@@ -989,7 +999,11 @@ mod tests {
             .iter()
             .flat_map(|b| b.occurrences.iter().map(|o| &o.file))
             .collect();
-        assert_eq!(unique_files.len(), 3, "expected all three files to be covered");
+        assert_eq!(
+            unique_files.len(),
+            3,
+            "expected all three files to be covered"
+        );
     }
 
     #[test]
@@ -1030,15 +1044,7 @@ mod tests {
         // doesn't collapse them.
         let a = make_unique_block(100, "a.ts");
         let b = make_unique_block(100, "b.ts");
-        let report = detect_with_mode(
-            &[a, b],
-            DuplicationMode::Sonar,
-            5,
-            10,
-            100,
-            100,
-            false,
-        );
+        let report = detect_with_mode(&[a, b], DuplicationMode::Sonar, 5, 10, 100, 100, false);
         assert_eq!(report.mode, DuplicationMode::Sonar);
         assert!(report.duplication_percent > 0.0);
     }
@@ -1092,27 +1098,16 @@ mod tests {
         // Build two token streams that contain a clear duplicate block of
         // ~80 tokens. With k=5, winnow window=10, and min_tokens=30 we
         // expect at least one block to be detected.
-        let shared: Vec<Token> = (0..80)
-            .map(|i| t(&format!("tok{}", i)))
-            .collect();
+        let shared: Vec<Token> = (0..80).map(|i| t(&format!("tok{}", i))).collect();
         let mut a = shared.clone();
         a.push(t("end"));
         let mut b = shared.clone();
         b.push(t("end"));
 
-        let dup = detect(
-            &[("a.ts".into(), a), ("b.ts".into(), b)],
-            5,
-            10,
-            30,
-        );
+        let dup = detect(&[("a.ts".into(), a), ("b.ts".into(), b)], 5, 10, 30);
         assert!(!dup.blocks.is_empty(), "expected at least one block, got 0");
         let block = &dup.blocks[0];
-        assert!(
-            block.token_count >= 30,
-            "token_count={}",
-            block.token_count
-        );
+        assert!(block.token_count >= 30, "token_count={}", block.token_count);
         assert_eq!(block.occurrences.len(), 2);
     }
 }

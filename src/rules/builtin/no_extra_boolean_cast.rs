@@ -9,17 +9,32 @@ use crate::scanner::language::Language;
 pub struct NoExtraBooleanCast;
 
 impl Rule for NoExtraBooleanCast {
-    fn id(&self) -> &'static str { "no-extra-boolean-cast" }
-    fn name(&self) -> &'static str { "No extra boolean cast" }
+    fn id(&self) -> &'static str {
+        "no-extra-boolean-cast"
+    }
+    fn name(&self) -> &'static str {
+        "No extra boolean cast"
+    }
     fn description(&self) -> &'static str {
         "Don't use `!!x` or `Boolean(x)` on a value that's already boolean."
     }
-    fn default_severity(&self) -> Severity { Severity::Minor }
-    fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
+    fn default_severity(&self) -> Severity {
+        Severity::Minor
+    }
+    fn languages(&self) -> &[Language] {
+        &[
+            Language::TypeScript,
+            Language::Tsx,
+            Language::JavaScript,
+            Language::Jsx,
+        ]
+    }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
-        let Some(lang) = file.language else { return issues };
+        let Some(lang) = file.language else {
+            return issues;
+        };
         crate::analyzer::parser::with_parser(lang, source, |tree| {
             crate::analyzer::parser::visit_descendants(tree.root_node(), |node| {
                 // `!!x` → unary_expression with `!` on a unary_expression with `!`
@@ -31,7 +46,8 @@ impl Rule for NoExtraBooleanCast {
                             issues.push(Issue {
                                 rule_id: "no-extra-boolean-cast".into(),
                                 severity: Severity::Minor,
-                                message: "Redundant `!!`; the inner expression is already boolean.".into(),
+                                message: "Redundant `!!`; the inner expression is already boolean."
+                                    .into(),
                                 file: file.path.clone(),
                                 start_line: start.row as u32 + 1,
                                 end_line: end.row as u32 + 1,
@@ -44,10 +60,14 @@ impl Rule for NoExtraBooleanCast {
                 }
                 // `Boolean(x)` where x is a comparison or already boolean
                 if node.kind() == "call_expression" {
-                    let Some(func) = node.child_by_field_name("function") else { return; };
+                    let Some(func) = node.child_by_field_name("function") else {
+                        return;
+                    };
                     if func.kind() == "identifier" {
                         if let Ok(name) = func.utf8_text(source.as_bytes()) {
-                            if name != "Boolean" { return; }
+                            if name != "Boolean" {
+                                return;
+                            }
                             // Get the argument
                             let mut cursor = node.walk();
                             for arg in node.children(&mut cursor) {
@@ -81,7 +101,8 @@ impl Rule for NoExtraBooleanCast {
 }
 
 fn is_already_boolean(node: Node) -> bool {
-    matches!(node.kind(),
+    matches!(
+        node.kind(),
         "binary_expression"           // x === y
         | "unary_expression"         // !x
         | "comparison_expression"    // x < y

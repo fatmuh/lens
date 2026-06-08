@@ -6,49 +6,32 @@ mod tests {
 
     use crate::analyzer::FileAnalysis;
     use crate::rules::builtin::{
-        no_explicit_any::NoExplicitAny, no_var::NoVar, no_eqeqeq::NoEqeqeq,
-        no_throw_literal::NoThrowLiteral, no_empty_function::NoEmptyFunction,
-        no_unreachable::NoUnreachable, no_unused_vars::NoUnusedVars,
-        max_params::MaxParams, no_implicit_any::NoImplicitAny,
-        no_magic_numbers::NoMagicNumbers, no_console::NoConsole,
-        no_eval::NoEval, no_new_func::NoNewFunc, no_script_url::NoScriptUrl,
-        no_unsafe_finally::NoUnsafeFinally, no_dupe_keys::NoDupeKeys,
-        no_fallthrough::NoFallthrough, no_self_compare::NoSelfCompare,
-        no_duplicate_imports::NoDuplicateImports,
-        no_async_promise_executor::NoAsyncPromiseExecutor,
-        require_await::RequireAwait, prefer_template::PreferTemplate,
-        no_useless_concat::NoUselessConcat, no_negated_condition::NoNegatedCondition,
-        no_lonely_if::NoLonelyIf, no_nested_ternary::NoNestedTernary,
-        no_unneeded_ternary::NoUnneededTernary, no_html_link::NoHtmlLink,
-        no_promise_all_in_loop::NoPromiseAllInLoop,
-        no_implied_eval::NoImpliedEval, no_prototype_builtins::NoPrototypeBuiltins,
-        no_redeclare::NoRedeclare, default_case::DefaultCase,
-        no_non_null_assertion::NoNonNullAssertion,
+        camelcase::Camelcase, default_case::DefaultCase, max_params::MaxParams,
+        no_async_promise_executor::NoAsyncPromiseExecutor, no_await_in_loop::NoAwaitInLoop,
+        no_bitwise::NoBitwise, no_console::NoConsole, no_control_regex::NoControlRegex,
+        no_dupe_keys::NoDupeKeys, no_duplicate_imports::NoDuplicateImports,
+        no_empty_function::NoEmptyFunction, no_empty_interface::NoEmptyInterface,
+        no_eqeqeq::NoEqeqeq, no_eval::NoEval, no_explicit_any::NoExplicitAny,
+        no_extra_bind::NoExtraBind, no_extra_boolean_cast::NoExtraBooleanCast,
+        no_fallthrough::NoFallthrough, no_html_link::NoHtmlLink, no_implicit_any::NoImplicitAny,
+        no_implied_eval::NoImpliedEval, no_import_assign::NoImportAssign, no_lonely_if::NoLonelyIf,
+        no_magic_numbers::NoMagicNumbers, no_misused_new::NoMisusedNew,
+        no_negated_condition::NoNegatedCondition, no_nested_ternary::NoNestedTernary,
+        no_new_buffer::NoNewBuffer as NoNewBuffer2, no_new_func::NoNewFunc,
+        no_new_symbol::NoNewSymbol, no_non_null_assertion::NoNonNullAssertion,
+        no_param_reassign::NoParamReassign, no_promise_all_in_loop::NoPromiseAllInLoop,
+        no_proto::NoProto, no_prototype_builtins::NoPrototypeBuiltins, no_redeclare::NoRedeclare,
+        no_return_await::NoReturnAwait, no_script_url::NoScriptUrl, no_self_compare::NoSelfCompare,
+        no_sparse_arrays::NoSparseArrays, no_throw_literal::NoThrowLiteral,
+        no_underscore_dangle::NoUnderscoreDangle, no_unneeded_ternary::NoUnneededTernary,
+        no_unreachable::NoUnreachable, no_unsafe_finally::NoUnsafeFinally,
+        no_unused_vars::NoUnusedVars, no_useless_concat::NoUselessConcat,
+        no_useless_rename::NoUselessRename as NoUselessRename2, no_useless_return::NoUselessReturn,
+        no_var::NoVar, no_warning_comments::NoWarningComments, no_with::NoWith,
         prefer_nullish_coalescing::PreferNullishCoalescing,
         prefer_optional_chain::PreferOptionalChain,
-        consistent_type_imports::ConsistentTypeImports,
-        no_import_assign::NoImportAssign, no_param_reassign::NoParamReassign,
-        no_return_await::NoReturnAwait, no_await_in_loop::NoAwaitInLoop,
-        prefer_arrow_callback::PreferArrowCallback,
-        no_useless_return::NoUselessReturn, no_else_return::NoElseReturn,
-        no_useless_rename::NoUselessRename as NoUselessRename2,
-        no_new_buffer::NoNewBuffer as NoNewBuffer2,
-        camelcase::Camelcase,
-        no_underscore_dangle::NoUnderscoreDangle,
-        no_empty_interface::NoEmptyInterface,
-        no_bitwise::NoBitwise,
-        prefer_spread::PreferSpread,
-        no_extra_bind::NoExtraBind,
-        no_extra_boolean_cast::NoExtraBooleanCast,
-        no_proto::NoProto,
-        no_with::NoWith,
-        no_new_symbol::NoNewSymbol,
-        no_control_regex::NoControlRegex,
-        no_warning_comments::NoWarningComments,
-        no_misused_new::NoMisusedNew,
-        quote_props::QuoteProps,
-        prefer_promise_reject_errors::PreferPromiseRejectErrors,
-        no_sparse_arrays::NoSparseArrays,
+        prefer_promise_reject_errors::PreferPromiseRejectErrors, prefer_spread::PreferSpread,
+        prefer_template::PreferTemplate, require_await::RequireAwait,
     };
     use crate::rules::{Issue, Rule, Severity};
     use crate::scanner::language::Language;
@@ -85,7 +68,12 @@ mod tests {
         let r = NoExplicitAny;
         let (f, s) = ts_file("function f(x: any) { return x; }");
         let issues = r.check(&f, &s);
-        assert_eq!(issues.len(), 1, "expected 1 `any` issue, got {}", issues.len());
+        assert_eq!(
+            issues.len(),
+            1,
+            "expected 1 `any` issue, got {}",
+            issues.len()
+        );
         assert_eq!(issues[0].rule_id, "no-explicit-any");
         assert_eq!(issues[0].severity, Severity::Major);
     }
@@ -182,9 +170,7 @@ mod tests {
     #[test]
     fn no_unreachable_flags_dead_code() {
         let r = NoUnreachable;
-        let (f, s) = ts_file(
-            "function f() { return 1; console.log('never'); }",
-        );
+        let (f, s) = ts_file("function f() { return 1; console.log('never'); }");
         let issues = r.check(&f, &s);
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].severity, Severity::Critical);
@@ -199,7 +185,12 @@ mod tests {
         let (f, s) = ts_file("function f(unused: number, used: number) { return used; }");
         let issues = r.check(&f, &s);
         let counts = count_by_rule(&issues);
-        assert_eq!(counts.get("no-unused-vars").copied().unwrap_or(0), 1, "got counts {:?}", counts);
+        assert_eq!(
+            counts.get("no-unused-vars").copied().unwrap_or(0),
+            1,
+            "got counts {:?}",
+            counts
+        );
     }
 
     // -----------------------------------------------------------------
@@ -306,7 +297,11 @@ mod tests {
         let mut f = ts_file(r#"<div dangerouslySetInnerHTML={{__html: x}} />"#).0;
         f.language = Some(Language::Tsx);
         f.path = PathBuf::from("test.tsx");
-        assert_eq!(r.check(&f, r#"<div dangerouslySetInnerHTML={{__html: x}} />"#).len(), 1);
+        assert_eq!(
+            r.check(&f, r#"<div dangerouslySetInnerHTML={{__html: x}} />"#)
+                .len(),
+            1
+        );
     }
 
     // -----------------------------------------------------------------
@@ -420,7 +415,10 @@ mod tests {
     fn no_promise_all_in_loop_flags_loop_use() {
         let r = NoPromiseAllInLoop;
         let (f, s) = ts_file("for (const x of items) { await Promise.all([p(x)]); }");
-        assert!(r.check(&f, &s).len() >= 1, "expected at least 1 issue, got none");
+        assert!(
+            r.check(&f, &s).len() >= 1,
+            "expected at least 1 issue, got none"
+        );
     }
 
     // -----------------------------------------------------------------
@@ -435,7 +433,11 @@ mod tests {
             assert!(!r.name().is_empty(), "{} has no name", r.id());
             assert!(!r.description().is_empty(), "{} has no description", r.id());
         }
-        assert!(reg.rules().len() >= 30, "expected at least 30 built-in rules, got {}", reg.rules().len());
+        assert!(
+            reg.rules().len() >= 30,
+            "expected at least 30 built-in rules, got {}",
+            reg.rules().len()
+        );
     }
 
     // -----------------------------------------------------------------

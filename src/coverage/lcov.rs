@@ -36,14 +36,8 @@ pub fn parse(content: &str) -> CoverageReport {
             // DA: <line>,<count>[,<checksum>]
             if let Some(f) = current.as_mut() {
                 let mut parts = rest.splitn(3, ',');
-                let line_num: u32 = parts
-                    .next()
-                    .and_then(|s| s.parse().ok())
-                    .unwrap_or(0);
-                let count: u64 = parts
-                    .next()
-                    .and_then(|s| s.parse().ok())
-                    .unwrap_or(0);
+                let line_num: u32 = parts.next().and_then(|s| s.parse().ok()).unwrap_or(0);
+                let count: u64 = parts.next().and_then(|s| s.parse().ok()).unwrap_or(0);
                 if line_num > 0 {
                     f.total_lines += 1;
                     f.executable_lines.push(line_num);
@@ -132,7 +126,11 @@ end_of_record
         assert_eq!(r.covered_lines, 4);
         assert!((r.coverage_percent - 66.666).abs() < 0.01);
 
-        let foo = r.files.iter().find(|f| f.path == PathBuf::from("src/foo.ts")).unwrap();
+        let foo = r
+            .files
+            .iter()
+            .find(|f| f.path == PathBuf::from("src/foo.ts"))
+            .unwrap();
         assert_eq!(foo.uncovered_lines, vec![3, 4]);
     }
 

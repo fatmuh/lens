@@ -8,7 +8,7 @@
 //! The watcher respects .gitignore and .lensignore.
 
 use anyhow::{Context, Result};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
@@ -37,8 +37,14 @@ pub fn watch(
 ) -> Result<()> {
     use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 
-    let root = project_root.canonicalize().context("resolving project root")?;
-    println!("  {} Watching {} for changes...", "👁".to_string().cyan(), root.display());
+    let root = project_root
+        .canonicalize()
+        .context("resolving project root")?;
+    println!(
+        "  {} Watching {} for changes...",
+        "👁".to_string().cyan(),
+        root.display()
+    );
     println!("  {} Press Ctrl+C to stop", "→".to_string().dimmed());
 
     // Set up file watcher.
@@ -70,7 +76,9 @@ pub fn watch(
                         matches!(ext, "ts" | "tsx" | "js" | "jsx")
                     });
 
-                if !relevant { continue; }
+                if !relevant {
+                    continue;
+                }
 
                 // Debounce: wait for a quiet period after last change.
                 let now = Instant::now();

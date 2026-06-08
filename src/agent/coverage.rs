@@ -52,8 +52,7 @@ pub async fn fix_uncovered(
             continue;
         }
 
-        let source_code = std::fs::read_to_string(&source_path)
-            .context("reading source file")?;
+        let source_code = std::fs::read_to_string(&source_path).context("reading source file")?;
 
         let line_numbers: Vec<u32> = lines.iter().copied().collect();
         println!(
@@ -105,9 +104,9 @@ pub async fn fix_uncovered(
 /// Parse uncovered lines from an LCOV file.
 /// Returns a map of file → sorted list of uncovered line numbers.
 fn parse_uncovered_lines(path: &Path) -> Result<std::collections::BTreeMap<String, Vec<u32>>> {
-    let content = std::fs::read_to_string(path)
-        .context("reading LCOV file")?;
-    let mut result: std::collections::BTreeMap<String, Vec<u32>> = std::collections::BTreeMap::new();
+    let content = std::fs::read_to_string(path).context("reading LCOV file")?;
+    let mut result: std::collections::BTreeMap<String, Vec<u32>> =
+        std::collections::BTreeMap::new();
     let mut current_file = String::new();
 
     for line in content.lines() {
@@ -119,9 +118,7 @@ fn parse_uncovered_lines(path: &Path) -> Result<std::collections::BTreeMap<Strin
             if parts.len() >= 2 {
                 if let (Ok(ln), Ok(hits)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
                     if hits == 0 {
-                        result.entry(current_file.clone())
-                            .or_default()
-                            .push(ln);
+                        result.entry(current_file.clone()).or_default().push(ln);
                     }
                 }
             }
@@ -142,7 +139,8 @@ fn build_coverage_system_prompt() -> String {
      5. Keep tests minimal — no unnecessary assertions\n\
      6. Do not change the behavior of the existing application\n\
      7. Output only the test file content, no explanations\n\
-     8. Use TypeScript (.ts) for the test file".to_string()
+     8. Use TypeScript (.ts) for the test file"
+        .to_string()
 }
 
 fn extract_code_block(s: &str) -> String {
@@ -162,7 +160,8 @@ fn extract_code_block(s: &str) -> String {
 fn derive_test_path(root: &Path, source: &str) -> PathBuf {
     // src/foo/bar.ts → tests/foo/bar.test.ts
     let rel = source.strip_prefix("src/").unwrap_or(source);
-    let stem = rel.strip_suffix(".ts")
+    let stem = rel
+        .strip_suffix(".ts")
         .or_else(|| rel.strip_suffix(".tsx"))
         .unwrap_or(rel);
     root.join("tests").join(format!("{}.test.ts", stem))

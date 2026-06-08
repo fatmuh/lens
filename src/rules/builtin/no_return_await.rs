@@ -9,27 +9,50 @@ use crate::scanner::language::Language;
 pub struct NoReturnAwait;
 
 impl Rule for NoReturnAwait {
-    fn id(&self) -> &'static str { "no-return-await" }
-    fn name(&self) -> &'static str { "No `return await`" }
+    fn id(&self) -> &'static str {
+        "no-return-await"
+    }
+    fn name(&self) -> &'static str {
+        "No `return await`"
+    }
     fn description(&self) -> &'static str {
         "Inside an `async` function, `return await x` is the same as `return x`. Drop the `await`."
     }
-    fn default_severity(&self) -> Severity { Severity::Minor }
-    fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
+    fn default_severity(&self) -> Severity {
+        Severity::Minor
+    }
+    fn languages(&self) -> &[Language] {
+        &[
+            Language::TypeScript,
+            Language::Tsx,
+            Language::JavaScript,
+            Language::Jsx,
+        ]
+    }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
-        let Some(lang) = file.language else { return issues };
+        let Some(lang) = file.language else {
+            return issues;
+        };
         crate::analyzer::parser::with_parser(lang, source, |tree| {
             crate::analyzer::parser::visit_descendants(tree.root_node(), |node| {
-                if node.kind() != "return_statement" { return; }
+                if node.kind() != "return_statement" {
+                    return;
+                }
                 // Check that the function we're in is async.
-                let Some(func) = enclosing_async_function(node) else { return; };
-                if !is_async(func, source) { return; }
+                let Some(func) = enclosing_async_function(node) else {
+                    return;
+                };
+                if !is_async(func, source) {
+                    return;
+                }
                 // Find an await_expression child.
                 let mut has_await = false;
                 crate::analyzer::parser::visit_descendants(node, |n| {
-                    if n.kind() == "await_expression" { has_await = true; }
+                    if n.kind() == "await_expression" {
+                        has_await = true;
+                    }
                 });
                 if has_await {
                     let start = node.start_position();
@@ -37,7 +60,8 @@ impl Rule for NoReturnAwait {
                     issues.push(Issue {
                         rule_id: "no-return-await".into(),
                         severity: Severity::Minor,
-                        message: "Drop the unnecessary `await` from this `return` statement.".into(),
+                        message: "Drop the unnecessary `await` from this `return` statement."
+                            .into(),
                         file: file.path.clone(),
                         start_line: start.row as u32 + 1,
                         end_line: end.row as u32 + 1,
@@ -54,8 +78,14 @@ impl Rule for NoReturnAwait {
 fn enclosing_async_function(node: Node) -> Option<Node> {
     let mut current = node;
     while let Some(parent) = current.parent() {
-        if matches!(parent.kind(), "function_declaration" | "function" | "method_definition"
-            | "arrow_function" | "generator_function_declaration") {
+        if matches!(
+            parent.kind(),
+            "function_declaration"
+                | "function"
+                | "method_definition"
+                | "arrow_function"
+                | "generator_function_declaration"
+        ) {
             return Some(parent);
         }
         current = parent;

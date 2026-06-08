@@ -16,21 +16,42 @@ use crate::scanner::language::Language;
 pub struct NoUnusedVars;
 
 impl Rule for NoUnusedVars {
-    fn id(&self) -> &'static str { "no-unused-vars" }
-    fn name(&self) -> &'static str { "No unused variables" }
+    fn id(&self) -> &'static str {
+        "no-unused-vars"
+    }
+    fn name(&self) -> &'static str {
+        "No unused variables"
+    }
     fn description(&self) -> &'static str {
         "Remove variables and parameters that are declared but never used."
     }
-    fn default_severity(&self) -> Severity { Severity::Major }
-    fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
+    fn default_severity(&self) -> Severity {
+        Severity::Major
+    }
+    fn languages(&self) -> &[Language] {
+        &[
+            Language::TypeScript,
+            Language::Tsx,
+            Language::JavaScript,
+            Language::Jsx,
+        ]
+    }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
-        let Some(lang) = file.language else { return issues };
+        let Some(lang) = file.language else {
+            return issues;
+        };
         crate::analyzer::parser::with_parser(lang, source, |tree| {
             crate::analyzer::parser::visit_descendants(tree.root_node(), |func| {
-                if !matches!(func.kind(), "function_declaration" | "function" | "method_definition"
-                    | "arrow_function" | "generator_function_declaration") {
+                if !matches!(
+                    func.kind(),
+                    "function_declaration"
+                        | "function"
+                        | "method_definition"
+                        | "arrow_function"
+                        | "generator_function_declaration"
+                ) {
                     return;
                 }
                 check_function(func, file, source, &mut issues);
@@ -75,8 +96,13 @@ fn check_function(func: Node, file: &FileAnalysis, source: &str, issues: &mut Ve
     //    (i.e. the parameter name or variable declarator name itself).
     let mut used: HashSet<String> = HashSet::new();
     crate::analyzer::parser::visit_descendants(func, |node| {
-        if matches!(node.kind(), "identifier" | "property_identifier" | "shorthand_property_identifier_pattern") {
-            if is_in_declaration_position(node) { return; }
+        if matches!(
+            node.kind(),
+            "identifier" | "property_identifier" | "shorthand_property_identifier_pattern"
+        ) {
+            if is_in_declaration_position(node) {
+                return;
+            }
             if let Ok(text) = node.utf8_text(source.as_bytes()) {
                 used.insert(text.to_string());
             }
@@ -129,7 +155,8 @@ fn is_in_declaration_position(node: Node) -> bool {
                 // declaration; the value side is a use.
                 if let Some(name) = parent.child_by_field_name("name") {
                     if name.start_position() == node.start_position()
-                        && name.end_position() == node.end_position() {
+                        && name.end_position() == node.end_position()
+                    {
                         return true;
                     }
                 }

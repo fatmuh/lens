@@ -1,7 +1,5 @@
 //! `no-warning-comments` — flags TODO/FIXME/XXX comments without an owner.
 
-use tree_sitter::Node;
-
 use crate::analyzer::FileAnalysis;
 use crate::rules::{Issue, Rule, Severity};
 use crate::scanner::language::Language;
@@ -11,20 +9,37 @@ pub struct NoWarningComments;
 const MARKERS: &[&str] = &["TODO", "FIXME", "XXX", "HACK"];
 
 impl Rule for NoWarningComments {
-    fn id(&self) -> &'static str { "no-warning-comments" }
-    fn name(&self) -> &'static str { "No `TODO`/`FIXME` comments" }
+    fn id(&self) -> &'static str {
+        "no-warning-comments"
+    }
+    fn name(&self) -> &'static str {
+        "No `TODO`/`FIXME` comments"
+    }
     fn description(&self) -> &'static str {
         "`TODO`/`FIXME`/etc. comments should reference an owner (e.g. `TODO(jane):`)."
     }
-    fn default_severity(&self) -> Severity { Severity::Info }
-    fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
+    fn default_severity(&self) -> Severity {
+        Severity::Info
+    }
+    fn languages(&self) -> &[Language] {
+        &[
+            Language::TypeScript,
+            Language::Tsx,
+            Language::JavaScript,
+            Language::Jsx,
+        ]
+    }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
-        let Some(lang) = file.language else { return issues };
+        let Some(lang) = file.language else {
+            return issues;
+        };
         crate::analyzer::parser::with_parser(lang, source, |tree| {
             crate::analyzer::parser::visit_descendants(tree.root_node(), |node| {
-                if node.kind() != "comment" { return; }
+                if node.kind() != "comment" {
+                    return;
+                }
                 if let Ok(text) = node.utf8_text(source.as_bytes()) {
                     let upper = text.to_ascii_uppercase();
                     for m in MARKERS {

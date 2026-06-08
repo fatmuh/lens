@@ -7,9 +7,9 @@
 //! Phase 2: rule engine (see [`crate::rules`]) — runs every enabled rule
 //! on each file and collects `Issue`s.
 
+pub mod cognitive;
 pub mod duplication;
 pub mod metrics;
-pub mod cognitive;
 pub mod parser;
 pub mod tokenize;
 
@@ -100,10 +100,7 @@ pub struct ProjectAnalysis {
 }
 
 /// Run analysis on a set of files (in parallel).
-pub fn analyze(
-    files: &[PathBuf],
-    config: &AnalyzeConfig,
-) -> ProjectAnalysis {
+pub fn analyze(files: &[PathBuf], config: &AnalyzeConfig) -> ProjectAnalysis {
     // 1. Per-file analysis in parallel.
     let analyses: Vec<FileAnalysis> = files
         .par_iter()
@@ -140,7 +137,11 @@ pub fn analyze(
         config.normalize_identifiers,
     );
 
-    ProjectAnalysis { files: analyses, aggregate_metrics, duplication }
+    ProjectAnalysis {
+        files: analyses,
+        aggregate_metrics,
+        duplication,
+    }
 }
 
 /// Analyze a single file: detect language, tokenize, parse for metrics,

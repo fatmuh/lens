@@ -1,7 +1,5 @@
 //! `no-var` — flags `var` declarations; use `let` or `const`.
 
-use tree_sitter::Node;
-
 use crate::analyzer::FileAnalysis;
 use crate::rules::{Issue, Rule, Severity};
 use crate::scanner::language::Language;
@@ -9,17 +7,32 @@ use crate::scanner::language::Language;
 pub struct NoVar;
 
 impl Rule for NoVar {
-    fn id(&self) -> &'static str { "no-var" }
-    fn name(&self) -> &'static str { "No `var` keyword" }
+    fn id(&self) -> &'static str {
+        "no-var"
+    }
+    fn name(&self) -> &'static str {
+        "No `var` keyword"
+    }
     fn description(&self) -> &'static str {
         "Use `let` or `const` instead of `var`. `var` has function scope and hoisting issues."
     }
-    fn default_severity(&self) -> Severity { Severity::Major }
-    fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
+    fn default_severity(&self) -> Severity {
+        Severity::Major
+    }
+    fn languages(&self) -> &[Language] {
+        &[
+            Language::TypeScript,
+            Language::Tsx,
+            Language::JavaScript,
+            Language::Jsx,
+        ]
+    }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
-        let Some(lang) = file.language else { return issues };
+        let Some(lang) = file.language else {
+            return issues;
+        };
         crate::analyzer::parser::with_parser(lang, source, |tree| {
             crate::analyzer::parser::visit_descendants(tree.root_node(), |node| {
                 // tree-sitter-typescript: `var` shows up as a `variable_declaration`

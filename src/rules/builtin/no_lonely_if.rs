@@ -1,8 +1,6 @@
 //! `no-lonely-if` — flags `if (x) { ... }` as the only statement in an
 //! `else` branch. Use `else if` instead.
 
-use tree_sitter::Node;
-
 use crate::analyzer::FileAnalysis;
 use crate::rules::{Issue, Rule, Severity};
 use crate::scanner::language::Language;
@@ -10,20 +8,37 @@ use crate::scanner::language::Language;
 pub struct NoLonelyIf;
 
 impl Rule for NoLonelyIf {
-    fn id(&self) -> &'static str { "no-lonely-if" }
-    fn name(&self) -> &'static str { "No lonely `if` in `else`" }
+    fn id(&self) -> &'static str {
+        "no-lonely-if"
+    }
+    fn name(&self) -> &'static str {
+        "No lonely `if` in `else`"
+    }
     fn description(&self) -> &'static str {
         "Use `else if` instead of an `if` as the sole statement of an `else` branch."
     }
-    fn default_severity(&self) -> Severity { Severity::Minor }
-    fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
+    fn default_severity(&self) -> Severity {
+        Severity::Minor
+    }
+    fn languages(&self) -> &[Language] {
+        &[
+            Language::TypeScript,
+            Language::Tsx,
+            Language::JavaScript,
+            Language::Jsx,
+        ]
+    }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
-        let Some(lang) = file.language else { return issues };
+        let Some(lang) = file.language else {
+            return issues;
+        };
         crate::analyzer::parser::with_parser(lang, source, |tree| {
             crate::analyzer::parser::visit_descendants(tree.root_node(), |node| {
-                if node.kind() != "else_clause" { return; }
+                if node.kind() != "else_clause" {
+                    return;
+                }
                 // Look for an if_statement anywhere under the else body
                 // (it may be inside a statement_block).
                 let mut found = false;

@@ -10,27 +10,53 @@ use crate::scanner::language::Language;
 pub struct NoImpliedEval;
 
 impl Rule for NoImpliedEval {
-    fn id(&self) -> &'static str { "no-implied-eval" }
-    fn name(&self) -> &'static str { "No implied `eval`" }
+    fn id(&self) -> &'static str {
+        "no-implied-eval"
+    }
+    fn name(&self) -> &'static str {
+        "No implied `eval`"
+    }
     fn description(&self) -> &'static str {
         "Avoid `setTimeout(\"code\", n)` and `setInterval(\"code\", n)`. The string is `eval()`d."
     }
-    fn default_severity(&self) -> Severity { Severity::Critical }
-    fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
+    fn default_severity(&self) -> Severity {
+        Severity::Critical
+    }
+    fn languages(&self) -> &[Language] {
+        &[
+            Language::TypeScript,
+            Language::Tsx,
+            Language::JavaScript,
+            Language::Jsx,
+        ]
+    }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
-        let Some(lang) = file.language else { return issues };
+        let Some(lang) = file.language else {
+            return issues;
+        };
         crate::analyzer::parser::with_parser(lang, source, |tree| {
             crate::analyzer::parser::visit_descendants(tree.root_node(), |node| {
-                if node.kind() != "call_expression" { return; }
-                let Some(func) = node.child_by_field_name("function") else { return; };
-                if func.kind() != "identifier" { return; }
-                let Ok(name) = func.utf8_text(source.as_bytes()) else { return; };
-                if !matches!(name, "setTimeout" | "setInterval") { return; }
+                if node.kind() != "call_expression" {
+                    return;
+                }
+                let Some(func) = node.child_by_field_name("function") else {
+                    return;
+                };
+                if func.kind() != "identifier" {
+                    return;
+                }
+                let Ok(name) = func.utf8_text(source.as_bytes()) else {
+                    return;
+                };
+                if !matches!(name, "setTimeout" | "setInterval") {
+                    return;
+                }
                 // First argument must be a string literal.
                 let mut cursor = node.walk();
-                let args: Vec<Node> = node.children(&mut cursor)
+                let args: Vec<Node> = node
+                    .children(&mut cursor)
                     .filter(|c| c.kind() == "arguments")
                     .flat_map(|a| {
                         let mut c = a.walk();
@@ -44,7 +70,10 @@ impl Rule for NoImpliedEval {
                         issues.push(Issue {
                             rule_id: "no-implied-eval".into(),
                             severity: Severity::Critical,
-                            message: format!("`{}` with a string argument is an implicit `eval`.", name),
+                            message: format!(
+                                "`{}` with a string argument is an implicit `eval`.",
+                                name
+                            ),
                             file: file.path.clone(),
                             start_line: start.row as u32 + 1,
                             end_line: end.row as u32 + 1,

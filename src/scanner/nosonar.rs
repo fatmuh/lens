@@ -23,15 +23,15 @@ use super::language::{Language, NosonarStyle};
 /// Pre-compiled regexes per style. We compile once at startup.
 static RE_LINE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"(?i)(?:^|\s)(?://[!/]?|--)\s*NOSONAR\b").unwrap());
-static RE_HASH: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?i)(?:^|\s)#\s*NOSONAR\b").unwrap());
-static RE_BLOCK: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?i)(?:/\*|<!--)\s*NOSONAR\b").unwrap());
+static RE_HASH: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)(?:^|\s)#\s*NOSONAR\b").unwrap());
+static RE_BLOCK: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)(?:/\*|<!--)\s*NOSONAR\b").unwrap());
 
 /// Returns true if the given line contains a NOSONAR marker for the given
 /// language. The match is whitespace-tolerant and case-insensitive.
 pub fn is_marked(line: &str, lang: Option<Language>) -> bool {
-    let Some(lang) = lang else { return RE_HASH.is_match(line) };
+    let Some(lang) = lang else {
+        return RE_HASH.is_match(line);
+    };
     for style in lang.nosonar_styles() {
         let re = match style {
             NosonarStyle::Line => &*RE_LINE,

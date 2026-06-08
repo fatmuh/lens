@@ -10,26 +10,50 @@ use crate::scanner::language::Language;
 pub struct PreferArrowCallback;
 
 impl Rule for PreferArrowCallback {
-    fn id(&self) -> &'static str { "prefer-arrow-callback" }
-    fn name(&self) -> &'static str { "Prefer arrow callbacks" }
+    fn id(&self) -> &'static str {
+        "prefer-arrow-callback"
+    }
+    fn name(&self) -> &'static str {
+        "Prefer arrow callbacks"
+    }
     fn description(&self) -> &'static str {
         "Use arrow functions for callbacks: `arr.map(x => x + 1)` instead of `arr.map(function (x) { return x + 1; })`."
     }
-    fn default_severity(&self) -> Severity { Severity::Minor }
-    fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
+    fn default_severity(&self) -> Severity {
+        Severity::Minor
+    }
+    fn languages(&self) -> &[Language] {
+        &[
+            Language::TypeScript,
+            Language::Tsx,
+            Language::JavaScript,
+            Language::Jsx,
+        ]
+    }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
-        let Some(lang) = file.language else { return issues };
+        let Some(lang) = file.language else {
+            return issues;
+        };
         crate::analyzer::parser::with_parser(lang, source, |tree| {
             // Look for `function (...) {}` directly inside an `arguments` node
             // (i.e. as an argument to a call).
             crate::analyzer::parser::visit_descendants(tree.root_node(), |node| {
-                if !matches!(node.kind(), "function" | "generator_function" | "function_declaration") { return; }
-                if !is_callback_position(node) { return; }
+                if !matches!(
+                    node.kind(),
+                    "function" | "generator_function" | "function_declaration"
+                ) {
+                    return;
+                }
+                if !is_callback_position(node) {
+                    return;
+                }
                 // Skip generators and named function expressions (named is
                 // fine but we leave it for now).
-                if node.kind() != "function" { return; }
+                if node.kind() != "function" {
+                    return;
+                }
                 let start = node.start_position();
                 let end = node.end_position();
                 issues.push(Issue {
@@ -51,7 +75,11 @@ impl Rule for PreferArrowCallback {
 /// True if this `function` is a direct argument to a call (i.e. its
 /// grandparent is a `call_expression` or `new_expression`).
 fn is_callback_position(func: Node) -> bool {
-    let Some(parent) = func.parent() else { return false; };
+    let Some(parent) = func.parent() else {
+        return false;
+    };
     // Walk up: arguments → call_expression
-    parent.parent().map_or(false, |gp| matches!(gp.kind(), "call_expression" | "new_expression"))
+    parent.parent().map_or(false, |gp| {
+        matches!(gp.kind(), "call_expression" | "new_expression")
+    })
 }

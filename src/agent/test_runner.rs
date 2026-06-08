@@ -9,9 +9,9 @@
 //! Detection: reads `package.json` scripts + checks for config files.
 
 use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 use std::io::BufRead;
 use std::path::{Path, PathBuf};
-use serde::{Deserialize, Serialize};
 
 /// Detected test framework and its configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,18 +64,16 @@ pub fn detect(root: &Path) -> Result<TestFramework> {
         anyhow::bail!("No package.json found. Only Node.js projects are supported.");
     }
 
-    let pkg: serde_json::Value = serde_json::from_str(
-        &std::fs::read_to_string(&pkg_path).context("reading package.json")?
-    ).context("parsing package.json")?;
+    let pkg: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&pkg_path).context("reading package.json")?)
+            .context("parsing package.json")?;
 
     let deps = pkg.get("dependencies").cloned().unwrap_or_default();
     let dev_deps = pkg.get("devDependencies").cloned().unwrap_or_default();
     let scripts = pkg.get("scripts").cloned().unwrap_or_default();
 
     // Merge deps + devDeps for checking.
-    let has_dep = |name: &str| -> bool {
-        deps.get(name).is_some() || dev_deps.get(name).is_some()
-    };
+    let has_dep = |name: &str| -> bool { deps.get(name).is_some() || dev_deps.get(name).is_some() };
 
     // Check for vitest first (explicit, usually preferred if installed).
     if has_dep("vitest") {
@@ -91,10 +89,15 @@ pub fn detect(root: &Path) -> Result<TestFramework> {
 
     // Check for jest.
     if has_dep("jest") || has_dep("ts-jest") {
-        let jest_config = find_config(root, &[
-            "jest.config.ts", "jest.config.js", "jest.config.mjs",
-            "jest.config.cjs",
-        ]);
+        let jest_config = find_config(
+            root,
+            &[
+                "jest.config.ts",
+                "jest.config.js",
+                "jest.config.mjs",
+                "jest.config.cjs",
+            ],
+        );
 
         // Build coverage command.
         let mut cov_cmd = build_npx_cmd("jest", "--coverage", &scripts, "test:cov");
@@ -183,7 +186,12 @@ fn execute_test_command(root: &Path, args: &[String]) -> Result<TestRunResult> {
 
     // Print header.
     eprintln!();
-    eprintln!("  {} Running: {} {}", "->".dimmed(), program.cyan(), cmd_args.join(" ").cyan());
+    eprintln!(
+        "  {} Running: {} {}",
+        "->".dimmed(),
+        program.cyan(),
+        cmd_args.join(" ").cyan()
+    );
     eprintln!();
 
     // Spawn child with stdout/stderr inherited so jest output streams directly.
@@ -210,15 +218,23 @@ fn execute_test_command(root: &Path, args: &[String]) -> Result<TestRunResult> {
     loop {
         std::thread::sleep(std::time::Duration::from_millis(250));
         // Check if done (non-blocking).
-        if handle.is_finished() { break; }
+        if handle.is_finished() {
+            break;
+        }
         idx += 1;
         dots = (dots + 1) % 4;
         let dot_str = ".".repeat(dots + 1);
-        eprint!("\r  {} Running tests {} {:>3} ", "\u{1F9EA}".cyan(), dot_str, spinner[idx % 4]);
+        eprint!(
+            "\r  {} Running tests {} {:>3} ",
+            "\u{1F9EA}".cyan(),
+            dot_str,
+            spinner[idx % 4]
+        );
         let _ = std::io::Write::flush(&mut std::io::stderr());
     }
 
-    let (status_result, duration) = handle.join()
+    let (status_result, duration) = handle
+        .join()
         .map_err(|_| anyhow::anyhow!("Test process thread panicked"))?;
     let status = status_result.context("Waiting for test process")?;
 
@@ -267,12 +283,14 @@ fn parse_jest_summary(path: &Path) -> (u32, u32, u32, u32, Vec<TestCaseResult>) 
     // coverage-summary.json has structure:
     // { "total": { "lines": { "total": N, "covered": C, ... } }, "src/foo.ts": { ... } }
     // We use line coverage as a proxy.
-    let total_lines = val.get("total")
+    let total_lines = val
+        .get("total")
         .and_then(|t| t.get("lines"))
         .and_then(|l| l.get("total"))
         .and_then(|v| v.as_u64())
         .unwrap_or(0) as u32;
-    let covered_lines = val.get("total")
+    let covered_lines = val
+        .get("total")
         .and_then(|t| t.get("lines"))
         .and_then(|l| l.get("covered"))
         .and_then(|v| v.as_u64())
@@ -282,16 +300,23 @@ fn parse_jest_summary(path: &Path) -> (u32, u32, u32, u32, Vec<TestCaseResult>) 
     let mut test_cases = Vec::new();
     if let Some(files) = val.as_object() {
         for (file_name, file_data) in files {
-            if file_name == "total" { continue; }
-            let pct = file_data.get("lines")
+            if file_name == "total" {
+                continue;
+            }
+            let pct = file_data
+                .get("lines")
                 .and_then(|l| l.get("pct"))
                 .and_then(|v| v.as_f64())
                 .unwrap_or(0.0);
             test_cases.push(TestCaseResult {
                 name: file_name.clone(),
-                status: if pct >= 100.0 { TestCaseStatus::Passed }
-                        else if pct > 0.0 { TestCaseStatus::Failed }
-                        else { TestCaseStatus::Skipped },
+                status: if pct >= 100.0 {
+                    TestCaseStatus::Passed
+                } else if pct > 0.0 {
+                    TestCaseStatus::Failed
+                } else {
+                    TestCaseStatus::Skipped
+                },
                 file: Some(file_name.clone()),
                 duration_ms: None,
             });
@@ -300,7 +325,13 @@ fn parse_jest_summary(path: &Path) -> (u32, u32, u32, u32, Vec<TestCaseResult>) 
 
     // Return line-level summary as test counts (rough approximation).
     // Actual test counts come from jest's own output which goes to terminal.
-    (total_lines, covered_lines, total_lines - covered_lines, 0, test_cases)
+    (
+        total_lines,
+        covered_lines,
+        total_lines - covered_lines,
+        0,
+        test_cases,
+    )
 }
 
 fn parse_test_summary(output: &str) -> (u32, u32, u32, u32) {
@@ -317,10 +348,18 @@ fn parse_test_summary(output: &str) -> (u32, u32, u32, u32) {
         let line = line.to_lowercase();
         if line.contains("tests:") && (line.contains("passed") || line.contains("total")) {
             // "Tests:       5 passed, 2 failed, 1 skipped, 8 total"
-            if let Some(n) = extract_count(&line, "passed") { passed = n; }
-            if let Some(n) = extract_count(&line, "failed") { failed = n; }
-            if let Some(n) = extract_count(&line, "skipped") { skipped = n; }
-            if let Some(n) = extract_count(&line, "total") { total = n; }
+            if let Some(n) = extract_count(&line, "passed") {
+                passed = n;
+            }
+            if let Some(n) = extract_count(&line, "failed") {
+                failed = n;
+            }
+            if let Some(n) = extract_count(&line, "skipped") {
+                skipped = n;
+            }
+            if let Some(n) = extract_count(&line, "total") {
+                total = n;
+            }
         }
     }
 
@@ -329,10 +368,14 @@ fn parse_test_summary(output: &str) -> (u32, u32, u32, u32) {
         for line in output.lines() {
             let line = line.to_lowercase();
             if line.contains("passing") {
-                if let Some(n) = extract_count(&line, "passing") { passed = n; }
+                if let Some(n) = extract_count(&line, "passing") {
+                    passed = n;
+                }
             }
             if line.contains("failing") {
-                if let Some(n) = extract_count(&line, "failing") { failed = n; }
+                if let Some(n) = extract_count(&line, "failing") {
+                    failed = n;
+                }
             }
         }
         total = passed + failed;
@@ -370,9 +413,9 @@ fn parse_test_cases(output: &str) -> Vec<TestCaseResult> {
         // Detect file header: "PASS unit-test/foo.spec.ts (5 s)" or "FAIL ..."
         // or "PASS src/foo.spec.ts"
         if trimmed.starts_with("PASS ") || trimmed.starts_with("FAIL ") {
-            let is_pass = trimmed.starts_with("PASS");
+            let _is_pass = trimmed.starts_with("PASS");
             let rest = &trimmed[5..]; // after "PASS " or "FAIL "
-            // Strip duration: "unit-test/foo.spec.ts (5.234 s)"
+                                      // Strip duration: "unit-test/foo.spec.ts (5.234 s)"
             let file = if let Some(paren_pos) = rest.find(" (") {
                 &rest[..paren_pos]
             } else {
@@ -386,7 +429,8 @@ fn parse_test_cases(output: &str) -> Vec<TestCaseResult> {
         //   or "✕ should fail (1 ms)"
         //   or "○ skipped test"
         //   or "● should fail"
-        if let Some(rest) = trimmed.strip_prefix('✓')
+        if let Some(rest) = trimmed
+            .strip_prefix('✓')
             .or_else(|| trimmed.strip_prefix('✅'))
             .or_else(|| trimmed.strip_prefix("PASS"))
         {
@@ -397,7 +441,8 @@ fn parse_test_cases(output: &str) -> Vec<TestCaseResult> {
                 file: current_file.clone(),
                 duration_ms: duration,
             });
-        } else if let Some(rest) = trimmed.strip_prefix('✕')
+        } else if let Some(rest) = trimmed
+            .strip_prefix('✕')
             .or_else(|| trimmed.strip_prefix('✗'))
             .or_else(|| trimmed.strip_prefix('✘'))
             .or_else(|| trimmed.strip_prefix('●'))
@@ -410,7 +455,8 @@ fn parse_test_cases(output: &str) -> Vec<TestCaseResult> {
                 file: current_file.clone(),
                 duration_ms: duration,
             });
-        } else if let Some(rest) = trimmed.strip_prefix('○')
+        } else if let Some(rest) = trimmed
+            .strip_prefix('○')
             .or_else(|| trimmed.strip_prefix('◌'))
             .or_else(|| trimmed.strip_prefix("SKIP"))
         {
@@ -457,10 +503,14 @@ fn extract_count(line: &str, keyword: &str) -> Option<u32> {
     if let Some(pos) = line.find(keyword_lower) {
         let before = &line[..pos];
         // Walk backwards to find the number.
-        let num_str: String = before.chars().rev()
+        let num_str: String = before
+            .chars()
+            .rev()
             .take_while(|c| c.is_ascii_digit())
             .collect::<String>()
-            .chars().rev().collect();
+            .chars()
+            .rev()
+            .collect();
         return num_str.parse().ok();
     }
     None
@@ -550,11 +600,7 @@ fn find_coverage_output(root: &Path, dir: &str) -> Option<PathBuf> {
     }
 
     // Look for LCOV file in common locations.
-    let candidates = [
-        "lcov.info",
-        "lcov.info.txt",
-        "lcov.info.json",
-    ];
+    let candidates = ["lcov.info", "lcov.info.txt", "lcov.info.json"];
 
     // Check directly in coverage dir.
     for name in &candidates {
@@ -608,10 +654,7 @@ fn parse_lcov_percent(path: &Path) -> Result<f64> {
     Ok((covered as f64 / total as f64) * 100.0)
 }
 
-fn list_deps(
-    deps: &serde_json::Value,
-    dev_deps: &serde_json::Value,
-) -> String {
+fn list_deps(deps: &serde_json::Value, dev_deps: &serde_json::Value) -> String {
     let mut names: Vec<String> = Vec::new();
     if let Some(obj) = deps.as_object() {
         names.extend(obj.keys().cloned());

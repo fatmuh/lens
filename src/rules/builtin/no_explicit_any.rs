@@ -9,13 +9,21 @@ use crate::scanner::language::Language;
 pub struct NoExplicitAny;
 
 impl Rule for NoExplicitAny {
-    fn id(&self) -> &'static str { "no-explicit-any" }
-    fn name(&self) -> &'static str { "No explicit `any`" }
+    fn id(&self) -> &'static str {
+        "no-explicit-any"
+    }
+    fn name(&self) -> &'static str {
+        "No explicit `any`"
+    }
     fn description(&self) -> &'static str {
         "Avoid using the `any` type. Use a specific type or `unknown` instead."
     }
-    fn default_severity(&self) -> Severity { Severity::Major }
-    fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx] }
+    fn default_severity(&self) -> Severity {
+        Severity::Major
+    }
+    fn languages(&self) -> &[Language] {
+        &[Language::TypeScript, Language::Tsx]
+    }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();

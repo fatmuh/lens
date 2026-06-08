@@ -14,37 +14,64 @@ pub struct MaxParams {
 }
 
 impl Default for MaxParams {
-    fn default() -> Self { Self { threshold: 5 } }
+    fn default() -> Self {
+        Self { threshold: 5 }
+    }
 }
 
 impl MaxParams {
-    pub fn with_threshold(threshold: u32) -> Self { Self { threshold } }
+    pub fn with_threshold(threshold: u32) -> Self {
+        Self { threshold }
+    }
 }
 
 impl Rule for MaxParams {
-    fn id(&self) -> &'static str { "max-params" }
-    fn name(&self) -> &'static str { "Too many parameters" }
+    fn id(&self) -> &'static str {
+        "max-params"
+    }
+    fn name(&self) -> &'static str {
+        "Too many parameters"
+    }
     fn description(&self) -> &'static str {
         "Functions with more than the configured parameter count are hard to call. Consider an options object."
     }
-    fn default_severity(&self) -> Severity { Severity::Major }
-    fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
+    fn default_severity(&self) -> Severity {
+        Severity::Major
+    }
+    fn languages(&self) -> &[Language] {
+        &[
+            Language::TypeScript,
+            Language::Tsx,
+            Language::JavaScript,
+            Language::Jsx,
+        ]
+    }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
-        let Some(lang) = file.language else { return issues };
+        let Some(lang) = file.language else {
+            return issues;
+        };
         crate::analyzer::parser::with_parser(lang, source, |tree| {
             crate::analyzer::parser::visit_descendants(tree.root_node(), |node| {
-                if !matches!(node.kind(), "function_declaration" | "function" | "method_definition"
-                    | "generator_function_declaration") {
+                if !matches!(
+                    node.kind(),
+                    "function_declaration"
+                        | "function"
+                        | "method_definition"
+                        | "generator_function_declaration"
+                ) {
                     return;
                 }
-                let Some(params) = node.child_by_field_name("parameters") else { return; };
+                let Some(params) = node.child_by_field_name("parameters") else {
+                    return;
+                };
                 let count = count_params(params, source);
                 if count > self.threshold {
                     let start = node.start_position();
                     let end = node.end_position();
-                    let name = node.child_by_field_name("name")
+                    let name = node
+                        .child_by_field_name("name")
                         .and_then(|n| n.utf8_text(source.as_bytes()).ok())
                         .unwrap_or("<anonymous>");
                     issues.push(Issue {
@@ -71,11 +98,19 @@ fn count_params(params: Node, source: &str) -> u32 {
     let mut count = 0u32;
     let mut cursor = params.walk();
     for c in params.children(&mut cursor) {
-        if matches!(c.kind(), "required_parameter" | "optional_parameter" | "rest_pattern"
-            | "assignment_pattern" | "identifier") {
+        if matches!(
+            c.kind(),
+            "required_parameter"
+                | "optional_parameter"
+                | "rest_pattern"
+                | "assignment_pattern"
+                | "identifier"
+        ) {
             // Don't count a single "this" or rest indicator.
             if let Ok(text) = c.utf8_text(source.as_bytes()) {
-                if text == "this" { continue; }
+                if text == "this" {
+                    continue;
+                }
             }
             count += 1;
         }

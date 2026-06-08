@@ -4,8 +4,8 @@
 //! files in reports. This is intentionally lightweight — we don't do
 //! content-based detection in Phase 0.
 
-use std::path::Path;
 use std::fmt;
+use std::path::Path;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -78,8 +78,8 @@ impl Language {
         use Language::*;
         use NosonarStyle::*;
         match self {
-            Rust | TypeScript | Tsx | JavaScript | Jsx | Go | Java | C | Cpp | CSharp
-            | Kotlin | Swift | Scala => &[Line],
+            Rust | TypeScript | Tsx | JavaScript | Jsx | Go | Java | C | Cpp | CSharp | Kotlin
+            | Swift | Scala => &[Line],
             Python | Ruby | Bash | Yaml | Toml => &[Hash],
             Sql => &[DashDash],
             Html => &[Block],

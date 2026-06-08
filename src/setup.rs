@@ -55,23 +55,18 @@ pub fn load_config() -> Result<AiSetupConfig> {
     if !path.exists() {
         return Ok(AiSetupConfig::default());
     }
-    let content = std::fs::read_to_string(&path)
-        .context("reading ~/.lens/config.toml")?;
-    let cfg: AiSetupConfig = toml::from_str(&content)
-        .context("parsing ~/.lens/config.toml")?;
+    let content = std::fs::read_to_string(&path).context("reading ~/.lens/config.toml")?;
+    let cfg: AiSetupConfig = toml::from_str(&content).context("parsing ~/.lens/config.toml")?;
     Ok(cfg)
 }
 
 /// Save config to `~/.lens/config.toml`.
 pub fn save_config(cfg: &AiSetupConfig) -> Result<PathBuf> {
     let dir = config_dir()?;
-    std::fs::create_dir_all(&dir)
-        .context("creating ~/.lens/ directory")?;
+    std::fs::create_dir_all(&dir).context("creating ~/.lens/ directory")?;
     let path = dir.join("config.toml");
-    let content = toml::to_string_pretty(cfg)
-        .context("serializing config")?;
-    std::fs::write(&path, content)
-        .context("writing config file")?;
+    let content = toml::to_string_pretty(cfg).context("serializing config")?;
+    std::fs::write(&path, content).context("writing config file")?;
     Ok(path)
 }
 
@@ -97,7 +92,10 @@ pub fn run_setup() -> Result<std::process::ExitCode> {
 
     println!();
     println!("  {} Lens AI Setup", "🤖".cyan());
-    println!("  {} Configure your OpenAI-compatible API for auto-fix features", "→".dimmed());
+    println!(
+        "  {} Configure your OpenAI-compatible API for auto-fix features",
+        "→".dimmed()
+    );
     println!();
 
     // Load existing config as defaults.
@@ -113,16 +111,31 @@ pub fn run_setup() -> Result<std::process::ExitCode> {
     println!("  {} Examples:", "→".dimmed());
     println!("  {}   OpenAI:    https://api.openai.com/v1", "→".dimmed());
     println!("  {}   Ollama:    http://localhost:11434/v1", "→".dimmed());
-    println!("  {}   Groq:      https://api.groq.com/openai/v1", "→".dimmed());
-    println!("  {}   OpenRouter: https://openrouter.ai/api/v1", "→".dimmed());
-    println!("  {}   Together:  https://api.together.xyz/v1", "→".dimmed());
-    println!("  {}   Custom:    any OpenAI-compatible endpoint", "→".dimmed());
+    println!(
+        "  {}   Groq:      https://api.groq.com/openai/v1",
+        "→".dimmed()
+    );
+    println!(
+        "  {}   OpenRouter: https://openrouter.ai/api/v1",
+        "→".dimmed()
+    );
+    println!(
+        "  {}   Together:  https://api.together.xyz/v1",
+        "→".dimmed()
+    );
+    println!(
+        "  {}   Custom:    any OpenAI-compatible endpoint",
+        "→".dimmed()
+    );
     let base_url = prompt_default("  URL", &default_url)?;
 
     // 2. API Key
     println!();
     println!("  {} API Key", "2.".bold());
-    println!("  {} Leave empty for local models (Ollama, etc.)", "→".dimmed());
+    println!(
+        "  {} Leave empty for local models (Ollama, etc.)",
+        "→".dimmed()
+    );
     let api_key = prompt_password("  Key")?;
 
     // 3. Fetch models
@@ -147,21 +160,29 @@ pub fn run_setup() -> Result<std::process::ExitCode> {
                 existing.ai.model.clone()
             };
 
-            loop {
-                println!("  {} Enter model number (1-{}) or type a custom model name", "→".bold(), list.len().min(20));
+            {
+                println!(
+                    "  {} Enter model number (1-{}) or type a custom model name",
+                    "→".bold(),
+                    list.len().min(20)
+                );
                 let input = prompt_default("  Model", &default_model)?;
-                // Check if it's a number
                 if let Ok(idx) = input.parse::<usize>() {
                     if idx >= 1 && idx <= list.len().min(20) {
-                        break list[idx - 1].clone();
+                        list[idx - 1].clone()
+                    } else {
+                        input
                     }
+                } else {
+                    input
                 }
-                // It's a custom model name
-                break input;
             }
         }
         Ok(_) => {
-            println!("  {} No models found. Enter model name manually.", "→".yellow());
+            println!(
+                "  {} No models found. Enter model name manually.",
+                "→".yellow()
+            );
             let default_model = if existing.ai.model.is_empty() {
                 "gpt-4o".to_string()
             } else {
@@ -192,7 +213,11 @@ pub fn run_setup() -> Result<std::process::ExitCode> {
 
     let path = save_config(&cfg)?;
     println!();
-    println!("  {} Configuration saved to {}", "✓".green().bold(), path.display());
+    println!(
+        "  {} Configuration saved to {}",
+        "✓".green().bold(),
+        path.display()
+    );
     println!();
     println!("  {} AI Settings:", "→".bold());
     println!("    Base URL: {}", cfg.ai.base_url.cyan());
@@ -215,8 +240,7 @@ pub fn run_setup() -> Result<std::process::ExitCode> {
 /// Fetch models from OpenAI-compatible `/models` endpoint.
 fn fetch_models(base_url: &str, api_key: &str) -> Result<Vec<String>> {
     // Use a minimal Tokio runtime for the HTTP request.
-    let rt = tokio::runtime::Runtime::new()
-        .context("creating runtime")?;
+    let rt = tokio::runtime::Runtime::new().context("creating runtime")?;
 
     rt.block_on(async {
         let client = reqwest::Client::new();
@@ -227,7 +251,9 @@ fn fetch_models(base_url: &str, api_key: &str) -> Result<Vec<String>> {
             req = req.header("Authorization", format!("Bearer {}", api_key));
         }
 
-        let resp = req.send().await
+        let resp = req
+            .send()
+            .await
             .context("Failed to connect to API. Check the URL.")?;
 
         if !resp.status().is_success() {
@@ -249,10 +275,13 @@ fn fetch_models(base_url: &str, api_key: &str) -> Result<Vec<String>> {
             id: String,
         }
 
-        let body: ModelsResponse = resp.json().await
+        let body: ModelsResponse = resp
+            .json()
+            .await
             .context("Could not parse models response")?;
 
-        let mut models = body.data
+        let mut models = body
+            .data
             .unwrap_or_default()
             .into_iter()
             .map(|m| m.id)
@@ -300,5 +329,5 @@ fn mask_key(key: &str) -> String {
     if key.len() <= 8 {
         return "*".repeat(key.len());
     }
-    format!("{}...{}", &key[..4], &key[key.len()-4..])
+    format!("{}...{}", &key[..4], &key[key.len() - 4..])
 }

@@ -9,19 +9,32 @@ use crate::scanner::language::Language;
 pub struct NoEqeqeq;
 
 impl Rule for NoEqeqeq {
-    fn id(&self) -> &'static str { "no-eqeqeq" }
-    fn name(&self) -> &'static str { "Use `===` and `!==`" }
+    fn id(&self) -> &'static str {
+        "no-eqeqeq"
+    }
+    fn name(&self) -> &'static str {
+        "Use `===` and `!==`"
+    }
     fn description(&self) -> &'static str {
         "Use strict equality (`===` / `!==`) instead of loose equality (`==` / `!=`)."
     }
-    fn default_severity(&self) -> Severity { Severity::Major }
+    fn default_severity(&self) -> Severity {
+        Severity::Major
+    }
     fn languages(&self) -> &[Language] {
-        &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx]
+        &[
+            Language::TypeScript,
+            Language::Tsx,
+            Language::JavaScript,
+            Language::Jsx,
+        ]
     }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
-        let Some(lang) = file.language else { return issues };
+        let Some(lang) = file.language else {
+            return issues;
+        };
         crate::analyzer::parser::with_parser(lang, source, |tree| {
             crate::analyzer::parser::visit_descendants(tree.root_node(), |node| {
                 if let Some(op) = binary_op_text(node, source) {
@@ -30,7 +43,11 @@ impl Rule for NoEqeqeq {
                         issues.push(Issue {
                             rule_id: "no-eqeqeq".into(),
                             severity: Severity::Major,
-                            message: format!("Use `{}` instead of `{}`.", if op == "==" { "===" } else { "!==" }, op),
+                            message: format!(
+                                "Use `{}` instead of `{}`.",
+                                if op == "==" { "===" } else { "!==" },
+                                op
+                            ),
                             file: file.path.clone(),
                             start_line: start.row as u32 + 1,
                             end_line: start.row as u32 + 1,
@@ -46,7 +63,9 @@ impl Rule for NoEqeqeq {
 }
 
 fn binary_op_text(node: Node, source: &str) -> Option<String> {
-    if node.kind() != "binary_expression" { return None; }
+    if node.kind() != "binary_expression" {
+        return None;
+    }
     let op_node = node.child_by_field_name("operator")?;
     op_node.utf8_text(source.as_bytes()).ok().map(String::from)
 }

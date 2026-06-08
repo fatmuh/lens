@@ -25,7 +25,11 @@ fn print_terminal(rules: &[Box<dyn Rule>], args: &RulesArgs) {
     let filtered: Vec<&Box<dyn Rule>> = if let Some(lang) = &args.language {
         rules
             .iter()
-            .filter(|r| r.languages().iter().any(|l| format!("{:?}", l).eq_ignore_ascii_case(lang)))
+            .filter(|r| {
+                r.languages()
+                    .iter()
+                    .any(|l| format!("{:?}", l).eq_ignore_ascii_case(lang))
+            })
             .collect()
     } else {
         rules.iter().collect()
@@ -57,7 +61,11 @@ fn print_terminal(rules: &[Box<dyn Rule>], args: &RulesArgs) {
         "{} {} rules listed{}",
         "ℹ".dimmed(),
         filtered.len(),
-        if args.verbose { " (with descriptions)" } else { " (use -v for descriptions)" }
+        if args.verbose {
+            " (with descriptions)"
+        } else {
+            " (use -v for descriptions)"
+        }
     );
 }
 

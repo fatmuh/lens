@@ -33,7 +33,7 @@ fn scan_terminal_finds_files_and_respects_gitignore() {
         .args(["scan", dir.path().to_str().unwrap()])
         .assert()
         .success()
-        .stdout(predicate::str::contains("2"))   // 2 files
+        .stdout(predicate::str::contains("2")) // 2 files
         .stdout(predicate::str::contains("TypeScript"))
         .stdout(predicate::str::contains("1 marker"));
 }
@@ -45,7 +45,11 @@ fn scan_json_has_forward_compatible_schema() {
         .args(["scan", "--format", "json", dir.path().to_str().unwrap()])
         .output()
         .expect("run lens");
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 
     let json: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("valid JSON output");
@@ -207,7 +211,10 @@ fn block_level_duplication_has_line_ranges() {
             if i % 2 == 0 {
                 format!("identifier_{} = {};\n", i, i)
             } else {
-                format!("if (identifier_{} > 0) {{ identifier_{} = identifier_{} + 1; }}\n", i, i, i)
+                format!(
+                    "if (identifier_{} > 0) {{ identifier_{} = identifier_{} + 1; }}\n",
+                    i, i, i
+                )
             }
         })
         .collect();
@@ -226,7 +233,9 @@ fn block_level_duplication_has_line_ranges() {
         .expect("run lens");
     let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
 
-    let blocks = json["duplication"]["blocks"].as_array().expect("blocks array");
+    let blocks = json["duplication"]["blocks"]
+        .as_array()
+        .expect("blocks array");
     assert!(!blocks.is_empty(), "expected >= 1 block");
 
     let block = &blocks[0];
@@ -321,11 +330,7 @@ function processOrder(order: any) {
 
     // With --gate: exits non-zero.
     lens()
-        .args([
-            "scan",
-            "--gate",
-            dir.path().to_str().unwrap(),
-        ])
+        .args(["scan", "--gate", dir.path().to_str().unwrap()])
         .assert()
         .failure()
         .code(1);

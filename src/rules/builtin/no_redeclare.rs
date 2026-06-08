@@ -13,17 +13,32 @@ use crate::scanner::language::Language;
 pub struct NoRedeclare;
 
 impl Rule for NoRedeclare {
-    fn id(&self) -> &'static str { "no-redeclare" }
-    fn name(&self) -> &'static str { "No redeclaration" }
+    fn id(&self) -> &'static str {
+        "no-redeclare"
+    }
+    fn name(&self) -> &'static str {
+        "No redeclaration"
+    }
     fn description(&self) -> &'static str {
         "Don't redeclare a top-level variable. (Block-scoped shadowing allowed.)"
     }
-    fn default_severity(&self) -> Severity { Severity::Critical }
-    fn languages(&self) -> &[Language] { &[Language::TypeScript, Language::Tsx, Language::JavaScript, Language::Jsx] }
+    fn default_severity(&self) -> Severity {
+        Severity::Critical
+    }
+    fn languages(&self) -> &[Language] {
+        &[
+            Language::TypeScript,
+            Language::Tsx,
+            Language::JavaScript,
+            Language::Jsx,
+        ]
+    }
 
     fn check(&self, file: &FileAnalysis, source: &str) -> Vec<Issue> {
         let mut issues = Vec::new();
-        let Some(lang) = file.language else { return issues };
+        let Some(lang) = file.language else {
+            return issues;
+        };
         crate::analyzer::parser::with_parser(lang, source, |tree| {
             check_top_level(tree.root_node(), file, source, &mut issues);
         });
@@ -49,7 +64,10 @@ fn check_top_level(root: Node, file: &FileAnalysis, source: &str, issues: &mut V
                                 issues.push(Issue {
                                     rule_id: "no-redeclare".into(),
                                     severity: Severity::Critical,
-                                    message: format!("`{}` is already declared at the top level.", text),
+                                    message: format!(
+                                        "`{}` is already declared at the top level.",
+                                        text
+                                    ),
                                     file: file.path.clone(),
                                     start_line: line,
                                     end_line: line,

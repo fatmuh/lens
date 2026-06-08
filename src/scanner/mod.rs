@@ -13,7 +13,9 @@ use owo_colors::OwoColorize;
 use tracing::info;
 
 use crate::analyzer::{
-    self, duplication::{DuplicationMode, DuplicationReport}, metrics::AggregateMetrics,
+    self,
+    duplication::{DuplicationMode, DuplicationReport},
+    metrics::AggregateMetrics,
     AnalyzeConfig, FileAnalysis, ProjectAnalysis,
 };
 use crate::cli::{Format, ScanArgs};
@@ -45,7 +47,12 @@ impl ScanContext {
         config: Config,
         config_path: Option<PathBuf>,
     ) -> Self {
-        Self { root, files, config, config_path }
+        Self {
+            root,
+            files,
+            config,
+            config_path,
+        }
     }
 }
 
@@ -100,8 +107,11 @@ pub fn run(config_arg: Option<PathBuf>, args: ScanArgs) -> Result<ExitCode> {
     let analyze_cfg = AnalyzeConfig {
         duplication_mode,
         min_duplicate_tokens: config.duplication.min_tokens,
-        min_duplicate_lines: args.min_duplicate_lines.unwrap_or(config.duplication.min_lines),
-        normalize_identifiers: args.normalize_identifiers || config.duplication.normalize_identifiers,
+        min_duplicate_lines: args
+            .min_duplicate_lines
+            .unwrap_or(config.duplication.min_lines),
+        normalize_identifiers: args.normalize_identifiers
+            || config.duplication.normalize_identifiers,
         k_shingle: 5,
         winnow_window: 10,
         min_file_size_for_complexity: 0,
@@ -122,12 +132,22 @@ pub fn run(config_arg: Option<PathBuf>, args: ScanArgs) -> Result<ExitCode> {
     let ut_paths: Vec<PathBuf> = if !args.coverage_ut.is_empty() {
         args.coverage_ut.iter().map(|p| scan_root.join(p)).collect()
     } else {
-        config.coverage.ut_paths.iter().map(|p| scan_root.join(p)).collect()
+        config
+            .coverage
+            .ut_paths
+            .iter()
+            .map(|p| scan_root.join(p))
+            .collect()
     };
     let it_paths: Vec<PathBuf> = if !args.coverage_it.is_empty() {
         args.coverage_it.iter().map(|p| scan_root.join(p)).collect()
     } else {
-        config.coverage.it_paths.iter().map(|p| scan_root.join(p)).collect()
+        config
+            .coverage
+            .it_paths
+            .iter()
+            .map(|p| scan_root.join(p))
+            .collect()
     };
     let (mut coverage_report, ut_report, it_report) =
         coverage::parse_with_categories(&coverage_paths, &ut_paths, &it_paths);
@@ -219,9 +239,10 @@ fn save_state_snapshot(scan_root: &Path, analysis: &ProjectAnalysis) {
         let s = normalized.to_string_lossy().to_string();
         // Manual prefix strip (Path::strip_prefix is case-sensitive and
         // brittle on Windows). Use a case-insensitive suffix match.
-        let scan_str = util::path::normalize(scan_root).to_string_lossy().to_string();
-        let rel = if s.len() > scan_str.len()
-            && s[..scan_str.len()].eq_ignore_ascii_case(&scan_str)
+        let scan_str = util::path::normalize(scan_root)
+            .to_string_lossy()
+            .to_string();
+        let rel = if s.len() > scan_str.len() && s[..scan_str.len()].eq_ignore_ascii_case(&scan_str)
         {
             let mut rest = &s[scan_str.len()..];
             // Strip leading separator.
@@ -243,16 +264,26 @@ fn save_state_snapshot(scan_root: &Path, analysis: &ProjectAnalysis) {
                 Some(format!("{:016x}", h.finish()))
             })
             .unwrap_or_default();
-        let tracked: Vec<state::TrackedIssue> = f.issues.iter().map(|i| {
-            let key = state::Snapshot::issue_key(i);
-            state::TrackedIssue {
-                key,
-                rule_id: i.rule_id.clone(),
-                line: i.start_line,
-                message: i.message.clone(),
-            }
-        }).collect();
-        snap.files.insert(rel, state::FileSnapshot { hash, issues: tracked });
+        let tracked: Vec<state::TrackedIssue> = f
+            .issues
+            .iter()
+            .map(|i| {
+                let key = state::Snapshot::issue_key(i);
+                state::TrackedIssue {
+                    key,
+                    rule_id: i.rule_id.clone(),
+                    line: i.start_line,
+                    message: i.message.clone(),
+                }
+            })
+            .collect();
+        snap.files.insert(
+            rel,
+            state::FileSnapshot {
+                hash,
+                issues: tracked,
+            },
+        );
     }
     if let Err(e) = snap.save(scan_root) {
         eprintln!("warning: failed to save state snapshot: {e}");
@@ -267,7 +298,9 @@ fn apply_coverage_excludes(report: &mut CoverageReport, excludes: &[String], roo
     if excludes.is_empty() {
         return;
     }
-    let Ok(set) = build_coverage_globset(excludes) else { return };
+    let Ok(set) = build_coverage_globset(excludes) else {
+        return;
+    };
     report.files.retain(|f| {
         // Match against the path relative to the scan root.
         let rel = f.path.strip_prefix(root).unwrap_or(&f.path);
@@ -294,9 +327,15 @@ fn run_analyzer(files: &[PathBuf], cfg: &AnalyzeConfig, args: &ScanArgs) -> Proj
     // --- Incremental scanning (Phase B) ---
     // If a previous state exists, skip files whose hash matches.
     let prev = crate::state::Snapshot::load(
-        &args.path.canonicalize().unwrap_or_else(|_| args.path.clone())
+        &args
+            .path
+            .canonicalize()
+            .unwrap_or_else(|_| args.path.clone()),
     );
-    let scan_root = args.path.canonicalize().unwrap_or_else(|_| args.path.clone());
+    let scan_root = args
+        .path
+        .canonicalize()
+        .unwrap_or_else(|_| args.path.clone());
     let (changed, cached): (Vec<PathBuf>, Vec<FileAnalysis>) = if prev.files.is_empty() {
         (files.to_vec(), vec![])
     } else {
@@ -305,7 +344,9 @@ fn run_analyzer(files: &[PathBuf], cfg: &AnalyzeConfig, args: &ScanArgs) -> Proj
         for f in files {
             let normalized = crate::util::path::normalize(f);
             let s = normalized.to_string_lossy().to_string();
-            let scan_str = crate::util::path::normalize(&scan_root).to_string_lossy().to_string();
+            let scan_str = crate::util::path::normalize(&scan_root)
+                .to_string_lossy()
+                .to_string();
             let rel = if s.len() > scan_str.len()
                 && s[..scan_str.len()].eq_ignore_ascii_case(&scan_str)
             {
@@ -339,16 +380,20 @@ fn run_analyzer(files: &[PathBuf], cfg: &AnalyzeConfig, args: &ScanArgs) -> Proj
                         metrics: None,
                         tokens,
                         nosonar_count,
-                        issues: snap.issues.iter().map(|ti| Issue {
-                            rule_id: ti.rule_id.clone(),
-                            severity: Severity::Info, // best-effort
-                            message: ti.message.clone(),
-                            file: f.clone(),
-                            start_line: ti.line,
-                            end_line: ti.line,
-                            start_column: 0,
-                            end_column: 0,
-                        }).collect(),
+                        issues: snap
+                            .issues
+                            .iter()
+                            .map(|ti| Issue {
+                                rule_id: ti.rule_id.clone(),
+                                severity: Severity::Info, // best-effort
+                                message: ti.message.clone(),
+                                file: f.clone(),
+                                start_line: ti.line,
+                                end_line: ti.line,
+                                start_column: 0,
+                                end_column: 0,
+                            })
+                            .collect(),
                     });
                     continue;
                 }
@@ -444,12 +489,22 @@ fn evaluate_gate(
     // Quality ratings (Reliability / Security / Maintainability).
     let (rel, sec, maint) = crate::rating::compute_ratings(&analysis.files);
     if let Some(max) = max_rating {
-        for (name, r) in [("reliability", rel), ("security", sec), ("maintainability", maint)] {
+        for (name, r) in [
+            ("reliability", rel),
+            ("security", sec),
+            ("maintainability", maint),
+        ] {
             if rating_worse(r, max) {
-                messages.push((false, format!("{} rating {} > max {}", name, r.as_str(), max.as_str())));
+                messages.push((
+                    false,
+                    format!("{} rating {} > max {}", name, r.as_str(), max.as_str()),
+                ));
                 all_pass = false;
             } else {
-                messages.push((true, format!("{} rating {} ≤ max {}", name, r.as_str(), max.as_str())));
+                messages.push((
+                    true,
+                    format!("{} rating {} ≤ max {}", name, r.as_str(), max.as_str()),
+                ));
             }
         }
     }
@@ -520,14 +575,20 @@ fn evaluate_gate(
         if coverage.ut_total_lines() > 0 {
             messages.push((
                 true,
-                format!("ut_coverage {:.2}% (informational)", coverage.ut_coverage_percent),
+                format!(
+                    "ut_coverage {:.2}% (informational)",
+                    coverage.ut_coverage_percent
+                ),
             ));
         }
         // Integration-test coverage.
         if coverage.it_total_lines() > 0 {
             messages.push((
                 true,
-                format!("it_coverage {:.2}% (informational)", coverage.it_coverage_percent),
+                format!(
+                    "it_coverage {:.2}% (informational)",
+                    coverage.it_coverage_percent
+                ),
             ));
         }
     }
@@ -557,16 +618,10 @@ fn evaluate_gate(
             _ => unreachable!(),
         };
         if count > max {
-            messages.push((
-                false,
-                format!("{} {} > {} (max)", label, count, max),
-            ));
+            messages.push((false, format!("{} {} > {} (max)", label, count, max)));
             all_pass = false;
         } else {
-            messages.push((
-                true,
-                format!("{} {} ≤ {}", label, count, max),
-            ));
+            messages.push((true, format!("{} {} ≤ {}", label, count, max)));
         }
     }
 
@@ -574,15 +629,29 @@ fn evaluate_gate(
         println!(
             "{} {}",
             "✓ Quality gate: PASS".green().bold(),
-            format!("({})", messages.iter().map(|(_, m)| m.as_str()).collect::<Vec<_>>().join(", "))
-                .dimmed()
+            format!(
+                "({})",
+                messages
+                    .iter()
+                    .map(|(_, m)| m.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+            .dimmed()
         );
     } else {
         println!(
             "{} {}",
             "✗ Quality gate: FAIL".red().bold(),
-            format!("({})", messages.iter().map(|(_, m)| m.as_str()).collect::<Vec<_>>().join(", "))
-                .dimmed()
+            format!(
+                "({})",
+                messages
+                    .iter()
+                    .map(|(_, m)| m.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+            .dimmed()
         );
     }
     all_pass
@@ -651,7 +720,13 @@ fn report_terminal(
     print_duplication_summary(&analysis.duplication);
     print_coverage_summary(coverage);
     print_ratings_summary(&analysis.files);
-    print_issues_summary(&analysis.files, &ctx.root, new_code, since_days, &ctx.config.significant_code);
+    print_issues_summary(
+        &analysis.files,
+        &ctx.root,
+        new_code,
+        since_days,
+        &ctx.config.significant_code,
+    );
 
     println!();
     println!(
@@ -662,15 +737,23 @@ fn report_terminal(
     println!();
 }
 
-fn print_issues_summary(files: &[crate::analyzer::FileAnalysis], scan_root: &Path, new_code: bool, since_days: Option<u32>, sig_config: &crate::config::SignificantCodeConfig) {
+fn print_issues_summary(
+    files: &[crate::analyzer::FileAnalysis],
+    scan_root: &Path,
+    new_code: bool,
+    since_days: Option<u32>,
+    sig_config: &crate::config::SignificantCodeConfig,
+) {
     let snapshot = state::Snapshot::load(scan_root);
     // When --new-code is set, only NEW issues are shown; the rest are
     // hidden but the lifecycle counts still reflect the full picture.
     // --since-days filters by file mtime. The two combine with OR logic.
-    let all: Vec<&Issue> = files.iter()
+    let all: Vec<&Issue> = files
+        .iter()
         .flat_map(|f| f.issues.iter())
         .filter(|i| {
-            let new_match = new_code && matches!(snapshot.classify_issue(i), state::IssueStatus::New);
+            let new_match =
+                new_code && matches!(snapshot.classify_issue(i), state::IssueStatus::New);
             let mtime_match = since_days.map_or(true, |d| state::modified_within_days(&i.file, d));
             match (new_code, since_days) {
                 (true, Some(_)) => new_match || mtime_match,
@@ -690,9 +773,18 @@ fn print_issues_summary(files: &[crate::analyzer::FileAnalysis], scan_root: &Pat
     let filtered = new_code || since_days.is_some();
     if filtered {
         let mut parts = vec!["Issues".to_string()];
-        if new_code { parts.push("new code".into()); }
-        if let Some(d) = since_days { parts.push(format!("last {} days", d)); }
-        println!("\n  {}", format!("{} ({})", parts[0], parts[1..].join(" + ")).bold().cyan());
+        if new_code {
+            parts.push("new code".into());
+        }
+        if let Some(d) = since_days {
+            parts.push(format!("last {} days", d));
+        }
+        println!(
+            "\n  {}",
+            format!("{} ({})", parts[0], parts[1..].join(" + "))
+                .bold()
+                .cyan()
+        );
         println!("  {} filter active — other issues hidden", "→".dimmed());
     } else {
         println!("\n  {}", "Issues".bold().cyan());
@@ -721,10 +813,8 @@ fn print_issues_summary(files: &[crate::analyzer::FileAnalysis], scan_root: &Pat
         }
     }
     // Fixed = issues from the previous snapshot that are no longer in current scan.
-    let current_keys: std::collections::HashSet<String> = all
-        .iter()
-        .map(|i| state::Snapshot::issue_key(i))
-        .collect();
+    let current_keys: std::collections::HashSet<String> =
+        all.iter().map(|i| state::Snapshot::issue_key(i)).collect();
     for (_, prev_file) in &snapshot.files {
         for prev_issue in &prev_file.issues {
             if !current_keys.contains(&prev_issue.key) {
@@ -757,21 +847,31 @@ fn print_issues_summary(files: &[crate::analyzer::FileAnalysis], scan_root: &Pat
 
     // Significant code breakdown.
     let scan_root_normalized = crate::util::path::normalize(scan_root)
-        .to_string_lossy().to_string().replace('\\', "/");
-    let sig_count: usize = all.iter().filter(|i| {
-        let normalized = crate::util::path::normalize(&i.file)
-            .to_string_lossy().to_string().replace('\\', "/");
-        let rel = if normalized.len() > scan_root_normalized.len()
-            && normalized[..scan_root_normalized.len()].eq_ignore_ascii_case(&scan_root_normalized)
-        {
-            let mut rest = &normalized[scan_root_normalized.len()..];
-            while rest.starts_with('/') { rest = &rest[1..]; }
-            rest.to_string()
-        } else {
-            normalized
-        };
-        sig_config.is_significant(&rel)
-    }).count();
+        .to_string_lossy()
+        .to_string()
+        .replace('\\', "/");
+    let sig_count: usize = all
+        .iter()
+        .filter(|i| {
+            let normalized = crate::util::path::normalize(&i.file)
+                .to_string_lossy()
+                .to_string()
+                .replace('\\', "/");
+            let rel = if normalized.len() > scan_root_normalized.len()
+                && normalized[..scan_root_normalized.len()]
+                    .eq_ignore_ascii_case(&scan_root_normalized)
+            {
+                let mut rest = &normalized[scan_root_normalized.len()..];
+                while rest.starts_with('/') {
+                    rest = &rest[1..];
+                }
+                rest.to_string()
+            } else {
+                normalized
+            };
+            sig_config.is_significant(&rel)
+        })
+        .count();
     let non_sig = all.len() - sig_count;
     if non_sig > 0 {
         println!(
@@ -796,11 +896,16 @@ fn print_issues_summary(files: &[crate::analyzer::FileAnalysis], scan_root: &Pat
     // Top 5 issues (highest severity first, then by location).
     let mut sorted_issues: Vec<&Issue> = all.clone();
     sorted_issues.sort_by(|a, b| {
-        a.severity.cmp(&b.severity)
+        a.severity
+            .cmp(&b.severity)
             .then_with(|| a.file.cmp(&b.file))
             .then_with(|| a.start_line.cmp(&b.start_line))
     });
-    println!("\n  Top issues ({} of {} shown):", sorted_issues.len().min(10), sorted_issues.len());
+    println!(
+        "\n  Top issues ({} of {} shown):",
+        sorted_issues.len().min(10),
+        sorted_issues.len()
+    );
     for i in sorted_issues.iter().take(10) {
         let name = i.file.file_name().and_then(|n| n.to_str()).unwrap_or("?");
         println!(
@@ -839,13 +944,25 @@ fn print_metrics_summary(m: &AggregateMetrics) {
     let mut t = Table::new();
     t.set_header(vec![Cell::new("Metric"), Cell::new("Value")]);
     t.add_row(vec![Cell::new("Total LOC"), Cell::new(m.total_loc)]);
-    t.add_row(vec![Cell::new("  code lines"), Cell::new(m.total_code_lines)]);
-    t.add_row(vec![Cell::new("  comment lines"), Cell::new(m.total_comment_lines)]);
-    t.add_row(vec![Cell::new("  blank lines"), Cell::new(m.total_blank_lines)]);
+    t.add_row(vec![
+        Cell::new("  code lines"),
+        Cell::new(m.total_code_lines),
+    ]);
+    t.add_row(vec![
+        Cell::new("  comment lines"),
+        Cell::new(m.total_comment_lines),
+    ]);
+    t.add_row(vec![
+        Cell::new("  blank lines"),
+        Cell::new(m.total_blank_lines),
+    ]);
     t.add_row(vec![Cell::new("Functions"), Cell::new(m.total_functions)]);
     t.add_row(vec![Cell::new("Classes"), Cell::new(m.total_classes)]);
     t.add_row(vec![Cell::new("Interfaces"), Cell::new(m.total_interfaces)]);
-    t.add_row(vec![Cell::new("Type aliases"), Cell::new(m.total_type_aliases)]);
+    t.add_row(vec![
+        Cell::new("Type aliases"),
+        Cell::new(m.total_type_aliases),
+    ]);
     t.add_row(vec![Cell::new("Enums"), Cell::new(m.total_enums)]);
     t.add_row(vec![
         Cell::new("Total cyclomatic complexity"),
@@ -891,9 +1008,13 @@ fn print_coverage_summary(c: &CoverageReport) {
         colored, c.total_lines, c.file_count, c.format
     );
     if c.new_total_lines > 0 {
-        let nc = if c.new_coverage_percent >= 80.0 { "green" }
-                 else if c.new_coverage_percent >= 50.0 { "yellow" }
-                 else { "red" };
+        let nc = if c.new_coverage_percent >= 80.0 {
+            "green"
+        } else if c.new_coverage_percent >= 50.0 {
+            "yellow"
+        } else {
+            "red"
+        };
         let nc_str = format!("{:.2}%", c.new_coverage_percent);
         let nc_colored = match nc {
             "green" => nc_str.green().to_string(),
@@ -902,7 +1023,8 @@ fn print_coverage_summary(c: &CoverageReport) {
         };
         println!(
             "  New code: {} of {} lines covered ({})",
-            nc_colored, c.new_total_lines,
+            nc_colored,
+            c.new_total_lines,
             format!("{}/{}", c.new_covered_lines, c.new_total_lines).dimmed()
         );
     }
@@ -911,15 +1033,15 @@ fn print_coverage_summary(c: &CoverageReport) {
         .iter()
         .filter(|f| f.coverage_percent < 100.0)
         .collect();
-    low.sort_by(|a, b| a.coverage_percent.partial_cmp(&b.coverage_percent).unwrap_or(std::cmp::Ordering::Equal));
+    low.sort_by(|a, b| {
+        a.coverage_percent
+            .partial_cmp(&b.coverage_percent)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     if !low.is_empty() {
         println!("\n  Top 5 files with lowest coverage:");
         for f in low.iter().take(5) {
-            let name = f
-                .path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("?");
+            let name = f.path.file_name().and_then(|n| n.to_str()).unwrap_or("?");
             println!(
                 "    {:6.2}%  {} ({} uncovered)",
                 f.coverage_percent,
@@ -973,19 +1095,24 @@ fn print_duplication_summary(d: &DuplicationReport) {
     };
     let (label, unit) = match d.mode {
         crate::analyzer::duplication::DuplicationMode::Token => ("token-based", "tokens"),
-        crate::analyzer::duplication::DuplicationMode::Sonar => ("sonar-compat (line-based)", "lines"),
+        crate::analyzer::duplication::DuplicationMode::Sonar => {
+            ("sonar-compat (line-based)", "lines")
+        }
     };
     let fingerprint_note = if d.shared_fingerprint_count > 0 {
         format!(" ({} shared fingerprint(s))", d.shared_fingerprint_count)
     } else {
         String::new()
     };
-    println!("  {}: {} of {} {} are duplicated{}",
-        label, colored, d.total_tokens, unit, fingerprint_note);
+    println!(
+        "  {}: {} of {} {} are duplicated{}",
+        label, colored, d.total_tokens, unit, fingerprint_note
+    );
     if !d.top_offenders.is_empty() {
         println!("\n  Top duplicated files:");
         for (path, count) in d.top_offenders.iter().take(5) {
-            let rel = path.strip_prefix(&path.ancestors().nth(1).unwrap_or(path))
+            let rel = path
+                .strip_prefix(&path.ancestors().nth(1).unwrap_or(path))
                 .unwrap_or(path)
                 .to_string_lossy()
                 .replace('\\', "/");
@@ -998,11 +1125,7 @@ fn print_duplication_summary(d: &DuplicationReport) {
         for block in d.blocks.iter().take(5) {
             println!("    {} tokens", block.token_count.to_string().bold());
             for occ in &block.occurrences {
-                let name = occ
-                    .file
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("?");
+                let name = occ.file.file_name().and_then(|n| n.to_str()).unwrap_or("?");
                 println!(
                     "      {}:{}-{}",
                     name.dimmed(),
@@ -1159,7 +1282,9 @@ fn report_json(
     });
 
     // Issues (Phase 2).
-    let all_issues: Vec<_> = analysis.files.iter()
+    let all_issues: Vec<_> = analysis
+        .files
+        .iter()
         .flat_map(|a| a.issues.iter())
         .map(|i| {
             let rel = i.file.strip_prefix(&ctx.root).unwrap_or(&i.file);
@@ -1227,14 +1352,26 @@ fn report_html(
     duration: std::time::Duration,
     output: Option<&PathBuf>,
 ) -> Result<()> {
-    let dir = output.cloned().unwrap_or_else(|| ctx.config.html.output.clone());
+    let dir = output
+        .cloned()
+        .unwrap_or_else(|| ctx.config.html.output.clone());
     std::fs::create_dir_all(&dir).ok();
     let out = dir.join("index.html");
-    let html = render_html(ctx, display_config, analysis, coverage, nosonar_total, duration);
+    let html = render_html(
+        ctx,
+        display_config,
+        analysis,
+        coverage,
+        nosonar_total,
+        duration,
+    );
     std::fs::write(&out, html).with_context(|| format!("writing {}", out.display()))?;
     println!("HTML report written to {}", out.display());
     if ctx.config.html.open_browser {
-        println!("{}", "ℹ --open-browser not yet implemented (Phase 5).".dimmed());
+        println!(
+            "{}",
+            "ℹ --open-browser not yet implemented (Phase 5).".dimmed()
+        );
     }
     Ok(())
 }
@@ -1596,22 +1733,22 @@ fn report_sarif(
 
     // Build a list of unique rules + the list of results, mirroring the
     // SARIF 2.1.0 schema.
-    let all_issues: Vec<&Issue> = analysis.files.iter()
+    let all_issues: Vec<&Issue> = analysis
+        .files
+        .iter()
         .flat_map(|a| a.issues.iter())
         .collect();
     let mut rules_map: BTreeMap<String, serde_json::Value> = BTreeMap::new();
     let mut results: Vec<serde_json::Value> = Vec::new();
     for i in &all_issues {
-        rules_map
-            .entry(i.rule_id.clone())
-            .or_insert_with(|| {
-                serde_json::json!({
-                    "id": i.rule_id,
-                    "name": i.rule_id,
-                    "shortDescription": { "text": i.rule_id },
-                    "defaultConfiguration": { "level": severity_to_sarif_level(i.severity) },
-                })
-            });
+        rules_map.entry(i.rule_id.clone()).or_insert_with(|| {
+            serde_json::json!({
+                "id": i.rule_id,
+                "name": i.rule_id,
+                "shortDescription": { "text": i.rule_id },
+                "defaultConfiguration": { "level": severity_to_sarif_level(i.severity) },
+            })
+        });
         let rel = i.file.strip_prefix(&ctx.root).unwrap_or(&i.file);
         let rel = rel.to_string_lossy().replace('\\', "/");
         results.push(serde_json::json!({

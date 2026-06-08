@@ -7,12 +7,17 @@
 //! Source: https://github.com/SonarSource/SonarJS
 
 use super::{Rule, Severity};
-use crate::scanner::language::Language;
 use crate::analyzer::FileAnalysis;
 use crate::rules::Issue;
+use crate::scanner::language::Language;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum RuleType { Bug, Vulnerability, CodeSmell, SecurityHotspot }
+pub enum RuleType {
+    Bug,
+    Vulnerability,
+    CodeSmell,
+    SecurityHotspot,
+}
 
 /// Total rules from SonarJS: 493
 pub const SONAR_RULES: &[SonarRuleDef] = &[
@@ -528,21 +533,37 @@ pub struct SonarStub {
 }
 
 impl Rule for SonarStub {
-    fn id(&self) -> &'static str { self.id }
-    fn name(&self) -> &'static str { self.title }
-    fn description(&self) -> &'static str { self.title }
-    fn default_severity(&self) -> Severity { self.severity }
-    fn languages(&self) -> &[Language] { self.languages }
-    fn check(&self, _file: &FileAnalysis, _source: &str) -> Vec<Issue> { Vec::new() }
+    fn id(&self) -> &'static str {
+        self.id
+    }
+    fn name(&self) -> &'static str {
+        self.title
+    }
+    fn description(&self) -> &'static str {
+        self.title
+    }
+    fn default_severity(&self) -> Severity {
+        self.severity
+    }
+    fn languages(&self) -> &[Language] {
+        self.languages
+    }
+    fn check(&self, _file: &FileAnalysis, _source: &str) -> Vec<Issue> {
+        Vec::new()
+    }
 }
 
 /// Returns all 493 SonarJS rule stubs.
 pub fn all_sonar_stubs() -> Vec<Box<dyn Rule>> {
-    SONAR_RULES.iter().map(|d| Box::new(SonarStub {
-        id: d.id,
-        title: d.title,
-        severity: d.severity,
-        languages: d.languages,
-    }) as Box<dyn Rule>).collect()
+    SONAR_RULES
+        .iter()
+        .map(|d| {
+            Box::new(SonarStub {
+                id: d.id,
+                title: d.title,
+                severity: d.severity,
+                languages: d.languages,
+            }) as Box<dyn Rule>
+        })
+        .collect()
 }
-

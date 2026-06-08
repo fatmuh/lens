@@ -8,18 +8,18 @@ use anyhow::{Context, Result};
 use owo_colors::OwoColorize;
 use tracing_subscriber::EnvFilter;
 
-mod analyzer;
 mod agent;
+mod analyzer;
 mod cli;
 mod config;
 mod coverage;
+mod rating;
 mod report;
 mod rules;
 mod scanner;
 mod setup;
 mod state;
 mod util;
-mod rating;
 
 use cli::{Cli, Command};
 
@@ -87,10 +87,16 @@ fn run(cli: Cli) -> Result<ExitCode> {
                 cli::AgentMode::Coverage | cli::AgentMode::All => {
                     if let Some(lcov) = &args.coverage {
                         rt.block_on(agent::coverage::fix_uncovered(
-                            &config, &root, lcov, args.max_files,
+                            &config,
+                            &root,
+                            lcov,
+                            args.max_files,
                         ))?;
                     } else {
-                        println!("  {} No --coverage specified, skipping coverage agent", "->".to_string().dimmed());
+                        println!(
+                            "  {} No --coverage specified, skipping coverage agent",
+                            "->".to_string().dimmed()
+                        );
                     }
                 }
                 _ => {}
@@ -98,7 +104,10 @@ fn run(cli: Cli) -> Result<ExitCode> {
             match args.mode {
                 cli::AgentMode::Dedup | cli::AgentMode::All => {
                     rt.block_on(agent::dedup::fix_duplicates(
-                        &config, &root, 20, args.max_files,
+                        &config,
+                        &root,
+                        20,
+                        args.max_files,
                     ))?;
                 }
                 _ => {}
@@ -167,7 +176,10 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
     let root = args.path.canonicalize().context("resolving path")?;
 
     // 1. Detect test framework.
-    println!("\n  {} Detecting test framework...", "🔍".to_string().cyan());
+    println!(
+        "\n  {} Detecting test framework...",
+        "🔍".to_string().cyan()
+    );
     let framework = match agent::test_runner::detect(&root) {
         Ok(f) => f,
         Err(e) => {
@@ -176,11 +188,19 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
         }
     };
 
-    println!("  {} Detected: {}", "+".green().bold(), framework.name.cyan());
+    println!(
+        "  {} Detected: {}",
+        "+".green().bold(),
+        framework.name.cyan()
+    );
     if let Some(ref cfg) = framework.config_file {
         println!("  {} Config: {}", "->".dimmed(), cfg);
     }
-    println!("  {} Coverage cmd: {}", "->".dimmed(), framework.coverage_cmd.join(" ").cyan());
+    println!(
+        "  {} Coverage cmd: {}",
+        "->".dimmed(),
+        framework.coverage_cmd.join(" ").cyan()
+    );
 
     if args.detect_only {
         println!();
@@ -188,7 +208,10 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
     }
 
     // 2. Run tests with coverage.
-    println!("\n  {} Running tests with coverage...", "🧪".to_string().cyan());
+    println!(
+        "\n  {} Running tests with coverage...",
+        "🧪".to_string().cyan()
+    );
     let result = agent::test_runner::run_with_coverage(&root, &framework)?;
 
     // 3. Print results.
@@ -212,26 +235,54 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
     // Show per-file test results if available.
     if !result.test_cases.is_empty() {
         println!();
-        let mut by_file: std::collections::BTreeMap<Option<String>, Vec<&agent::test_runner::TestCaseResult>> = std::collections::BTreeMap::new();
+        let mut by_file: std::collections::BTreeMap<
+            Option<String>,
+            Vec<&agent::test_runner::TestCaseResult>,
+        > = std::collections::BTreeMap::new();
         for tc in &result.test_cases {
             by_file.entry(tc.file.clone()).or_default().push(tc);
         }
         for (file, tests) in &by_file {
             let fname = file.as_deref().unwrap_or("unknown");
-            let p = tests.iter().filter(|t| t.status == agent::test_runner::TestCaseStatus::Passed).count();
-            let f = tests.iter().filter(|t| t.status == agent::test_runner::TestCaseStatus::Failed).count();
-            let s = tests.iter().filter(|t| t.status == agent::test_runner::TestCaseStatus::Skipped).count();
+            let p = tests
+                .iter()
+                .filter(|t| t.status == agent::test_runner::TestCaseStatus::Passed)
+                .count();
+            let f = tests
+                .iter()
+                .filter(|t| t.status == agent::test_runner::TestCaseStatus::Failed)
+                .count();
+            let s = tests
+                .iter()
+                .filter(|t| t.status == agent::test_runner::TestCaseStatus::Skipped)
+                .count();
 
             if f > 0 {
-                println!("  {} {} ({} passed, {} failed{})", "FAIL".red().bold(), fname.cyan(), p.to_string().green(), f.to_string().red(), skip_suffix(s));
+                println!(
+                    "  {} {} ({} passed, {} failed{})",
+                    "FAIL".red().bold(),
+                    fname.cyan(),
+                    p.to_string().green(),
+                    f.to_string().red(),
+                    skip_suffix(s)
+                );
             } else {
-                println!("  {} {} ({} passed{})", "PASS".green().bold(), fname.cyan(), p.to_string().green(), skip_suffix(s));
+                println!(
+                    "  {} {} ({} passed{})",
+                    "PASS".green().bold(),
+                    fname.cyan(),
+                    p.to_string().green(),
+                    skip_suffix(s)
+                );
             }
 
             for tc in tests {
                 match tc.status {
                     agent::test_runner::TestCaseStatus::Failed => {
-                        let d = tc.duration_ms.map(|ms| format!(" ({}ms)", ms)).unwrap_or_default();
+                        let d = tc
+                            .duration_ms
+                            .map(|ms| format!(" ({}ms)", ms))
+                            .unwrap_or_default();
                         println!("    {} {}{}", "x".red(), tc.name.red(), d.dimmed());
                     }
                     agent::test_runner::TestCaseStatus::Skipped => {
@@ -239,7 +290,10 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
                     }
                     agent::test_runner::TestCaseStatus::Passed => {
                         if tests.len() <= 5 {
-                            let d = tc.duration_ms.map(|ms| format!(" ({}ms)", ms)).unwrap_or_default();
+                            let d = tc
+                                .duration_ms
+                                .map(|ms| format!(" ({}ms)", ms))
+                                .unwrap_or_default();
                             println!("    {} {}{}", "+".green(), tc.name, d.dimmed());
                         }
                     }
@@ -256,13 +310,20 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
             cov_file.display(),
         );
     } else {
-        println!("  {} No coverage report found in {}", "⚠".yellow(), framework.coverage_output_dir);
+        println!(
+            "  {} No coverage report found in {}",
+            "⚠".yellow(),
+            framework.coverage_output_dir
+        );
     }
 
     // 4. If --fix, feed to AI agent.
     if args.fix {
         if result.coverage_file.is_none() {
-            println!("  {} Cannot fix -- no coverage report available.", "x".red());
+            println!(
+                "  {} Cannot fix -- no coverage report available.",
+                "x".red()
+            );
             return Ok(ExitCode::from(1));
         }
 
@@ -284,10 +345,18 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
             return Ok(ExitCode::from(1));
         };
 
-        if base_url.is_empty() { base_url = "https://api.openai.com/v1".into(); }
-        if model.is_empty() { model = "gpt-4o".into(); }
+        if base_url.is_empty() {
+            base_url = "https://api.openai.com/v1".into();
+        }
+        if model.is_empty() {
+            model = "gpt-4o".into();
+        }
 
-        let ai_config = agent::client::AiConfig { api_key, base_url, model };
+        let ai_config = agent::client::AiConfig {
+            api_key,
+            base_url,
+            model,
+        };
         let lcov = result.coverage_file.as_ref().unwrap();
 
         println!("  {} AI Agent starting...", "robot".to_string().cyan());
@@ -297,9 +366,12 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
 
         match args.mode {
             cli::AgentMode::Coverage | cli::AgentMode::All => {
-                let fix_result = rt.block_on(
-                    agent::coverage::fix_uncovered(&ai_config, &root, lcov, args.max_files)
-                )?;
+                let fix_result = rt.block_on(agent::coverage::fix_uncovered(
+                    &ai_config,
+                    &root,
+                    lcov,
+                    args.max_files,
+                ))?;
                 println!(
                     "  {} Generated {} test files covering {} lines",
                     "+".green().bold(),
@@ -312,9 +384,12 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
                 }
             }
             cli::AgentMode::Dedup => {
-                rt.block_on(
-                    agent::dedup::fix_duplicates(&ai_config, &root, 20, args.max_files)
-                )?;
+                rt.block_on(agent::dedup::fix_duplicates(
+                    &ai_config,
+                    &root,
+                    20,
+                    args.max_files,
+                ))?;
             }
         }
     }
