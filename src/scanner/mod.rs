@@ -99,10 +99,10 @@ pub fn run(config_arg: Option<PathBuf>, args: ScanArgs) -> Result<ExitCode> {
     }
 
     // Phase 1: run the analyzer (metrics + duplication) over all files in parallel.
-    let duplication_mode = if args.sonar_compat {
-        DuplicationMode::Sonar
+    let duplication_mode = if args.token_mode {
+        DuplicationMode::Token
     } else {
-        DuplicationMode::parse(&config.duplication.mode).unwrap_or_default()
+        DuplicationMode::parse(&config.duplication.mode).unwrap_or(DuplicationMode::Sonar)
     };
     let analyze_cfg = AnalyzeConfig {
         duplication_mode,

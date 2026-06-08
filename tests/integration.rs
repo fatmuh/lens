@@ -194,7 +194,7 @@ function processOrder(order: any) {
     std::fs::write(dir.path().join("c.ts"), "const x = 42;\n").unwrap();
 
     let output = lens()
-        .args(["scan", "--format", "json", dir.path().to_str().unwrap()])
+        .args(["scan", "--format", "json", "--token-mode", dir.path().to_str().unwrap()])
         .output()
         .expect("run lens");
     let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
@@ -228,7 +228,7 @@ fn block_level_duplication_has_line_ranges() {
     std::fs::write(dir.path().join("b.ts"), &b).unwrap();
 
     let output = lens()
-        .args(["scan", "--format", "json", dir.path().to_str().unwrap()])
+        .args(["scan", "--format", "json", "--token-mode", dir.path().to_str().unwrap()])
         .output()
         .expect("run lens");
     let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
@@ -330,7 +330,7 @@ function processOrder(order: any) {
 
     // With --gate: exits non-zero.
     lens()
-        .args(["scan", "--gate", dir.path().to_str().unwrap()])
+        .args(["scan", "--gate", "--token-mode", dir.path().to_str().unwrap()])
         .assert()
         .failure()
         .code(1);

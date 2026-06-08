@@ -82,8 +82,7 @@ impl Default for NosonarConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct DuplicationConfig {
-    /// Algorithm to use: "token" (default, sensitive) or "sonar" (line-based,
-    /// SonarQube-compatible).
+    /// Algorithm to use: "sonar" (default, SonarQube-compatible) or "token" (sensitive).
     pub mode: String,
     /// Minimum block size in tokens (used by `mode = "token"`).
     pub min_tokens: usize,
@@ -99,7 +98,7 @@ pub struct DuplicationConfig {
 impl Default for DuplicationConfig {
     fn default() -> Self {
         Self {
-            mode: "token".to_string(),
+            mode: "sonar".to_string(),
             min_tokens: 100,
             // SonarQube's effective minimum: although the configuration
             // knob is `sonar.cpd.*.minimumTokens=100` (≈ 10 statements per

@@ -109,10 +109,11 @@ pub struct ScanArgs {
     #[arg(long)]
     pub no_color: bool,
 
-    /// Use SonarQube-compatible (line-based) duplication detection.
-    /// Overrides `duplication.mode` in the config file.
+    /// Use token-based (shingling + winnowing) duplication detection.
+    /// More sensitive than the default SonarQube-compatible mode.
+    /// Produces higher duplication percentages (catches smaller blocks).
     #[arg(long)]
-    pub sonar_compat: bool,
+    pub token_mode: bool,
 
     /// Minimum block size for `--sonar-compat` mode (default: 250).
     /// SonarQube's effective default for typical TypeScript code
