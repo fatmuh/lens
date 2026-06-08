@@ -215,7 +215,7 @@ pub fn detect_with_mode(
 ) -> DuplicationReport {
     match mode {
         DuplicationMode::Token => detect(files, k, window, min_tokens),
-        DuplicationMode::Sonar => detect_sonar(files, min_lines, normalize_identifiers),
+        DuplicationMode::Sonar => crate::analyzer::sonar_dup::detect_sonar_sq(files, min_lines, normalize_identifiers),
     }
 }
 
