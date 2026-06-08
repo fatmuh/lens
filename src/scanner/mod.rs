@@ -142,7 +142,7 @@ pub fn run(config_arg: Option<PathBuf>, args: ScanArgs) -> Result<ExitCode> {
     // Compute new-code coverage if state exists.
     let snap = state::Snapshot::load(&scan_root);
     if !snap.files.is_empty() {
-        coverage_report.compute_new_coverage(&snap);
+        coverage_report.compute_new_coverage(&snap, None);
     }
 
     let duration = started.elapsed();

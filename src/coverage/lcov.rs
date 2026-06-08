@@ -29,6 +29,8 @@ pub fn parse(content: &str) -> CoverageReport {
                 covered_lines: 0,
                 coverage_percent: 0.0,
                 uncovered_lines: Vec::new(),
+                executable_lines: Vec::new(),
+                covered_lines_set: std::collections::HashSet::new(),
             });
         } else if let Some(rest) = line.strip_prefix("DA:") {
             // DA: <line>,<count>[,<checksum>]
@@ -44,8 +46,10 @@ pub fn parse(content: &str) -> CoverageReport {
                     .unwrap_or(0);
                 if line_num > 0 {
                     f.total_lines += 1;
+                    f.executable_lines.push(line_num);
                     if count > 0 {
                         f.covered_lines += 1;
+                        f.covered_lines_set.insert(line_num);
                     } else {
                         f.uncovered_lines.push(line_num);
                     }

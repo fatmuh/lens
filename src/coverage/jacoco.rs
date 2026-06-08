@@ -207,6 +207,8 @@ fn finalize(c: ParsedClass) -> FileCoverage {
         covered_lines: c.covered_lines,
         coverage_percent,
         uncovered_lines: uncovered,
+        executable_lines: (1..=c.total_lines as u32).collect(),
+        covered_lines_set: (1..=c.total_lines).map(|x| x as u32).collect(),
     }
 }
 
