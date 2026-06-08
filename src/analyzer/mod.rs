@@ -11,6 +11,7 @@ pub mod cognitive;
 pub mod duplication;
 pub mod metrics;
 pub mod parser;
+pub mod sonar_dup;
 pub mod tokenize;
 
 use std::path::PathBuf;
@@ -247,6 +248,21 @@ pub fn is_test_or_generated_file(path: &str) -> bool {
         || name.ends_with(".generated.ts")
         || name.ends_with(".generated.tsx")
         || name.contains(".min.")
+    {
+        return true;
+    }
+
+    // Non-source files (should not be analyzed for duplication)
+    if name.ends_with(".json")
+        || name.ends_with(".yaml")
+        || name.ends_with(".yml")
+        || name.ends_with(".toml")
+        || name.ends_with(".xml")
+        || name.ends_with(".html")
+        || name.ends_with(".css")
+        || name.ends_with(".scss")
+        || name.ends_with(".md")
+        || name.ends_with(".lock")
     {
         return true;
     }
