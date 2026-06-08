@@ -120,9 +120,15 @@ pub fn tokenize(source: &str) -> Vec<Token> {
                     i += 2;
                     let mut depth = 1u32;
                     while i < len && depth > 0 {
-                        if bytes[i] == b'{' { depth += 1; }
-                        if bytes[i] == b'}' { depth -= 1; }
-                        if bytes[i] == b'\n' { current_line += 1; }
+                        if bytes[i] == b'{' {
+                            depth += 1;
+                        }
+                        if bytes[i] == b'}' {
+                            depth -= 1;
+                        }
+                        if bytes[i] == b'\n' {
+                            current_line += 1;
+                        }
                         i += 1;
                     }
                     continue;
@@ -180,15 +186,46 @@ pub fn tokenize(source: &str) -> Vec<Token> {
         let next2: String = remaining.chars().take(2).collect();
 
         if next3.len() >= 3 {
-            if matches!(next3.as_str(), "===" | "!==" | "<<=" | ">>>=" | "**=" | ">>=" | "<<=" | "...") {
-                tokens.push(Token { text: next3.clone(), line: current_line });
+            if matches!(
+                next3.as_str(),
+                "===" | "!==" | "<<=" | ">>>=" | "**=" | ">>=" | "<<=" | "..."
+            ) {
+                tokens.push(Token {
+                    text: next3.clone(),
+                    line: current_line,
+                });
                 i += next3.len();
                 continue;
             }
         }
         if next2.len() >= 2 {
-            if matches!(next2.as_str(), "==" | "!=" | "<=" | ">=" | "&&" | "||" | "??" | "=>" | "**" | "++" | "--" | "+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^=" | "<<" | ">>") {
-                tokens.push(Token { text: next2.clone(), line: current_line });
+            if matches!(
+                next2.as_str(),
+                "==" | "!="
+                    | "<="
+                    | ">="
+                    | "&&"
+                    | "||"
+                    | "??"
+                    | "=>"
+                    | "**"
+                    | "++"
+                    | "--"
+                    | "+="
+                    | "-="
+                    | "*="
+                    | "/="
+                    | "%="
+                    | "&="
+                    | "|="
+                    | "^="
+                    | "<<"
+                    | ">>"
+            ) {
+                tokens.push(Token {
+                    text: next2.clone(),
+                    line: current_line,
+                });
                 i += next2.len();
                 continue;
             }
@@ -278,6 +315,9 @@ mod tests {
         let src = "const f = (x) => x + 1;";
         let toks = tokenize(src);
         let texts: Vec<&str> = toks.iter().map(|t| t.text.as_str()).collect();
-        assert_eq!(texts, vec!["const", "f", "=", "(", "x", ")", "=>", "x", "+", "1", ";"]);
+        assert_eq!(
+            texts,
+            vec!["const", "f", "=", "(", "x", ")", "=>", "x", "+", "1", ";"]
+        );
     }
 }

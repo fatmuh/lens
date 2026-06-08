@@ -14,7 +14,9 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::PathBuf;
 
-use crate::analyzer::duplication::{BlockOccurrence, DuplicateBlock, DuplicationMode, DuplicationReport};
+use crate::analyzer::duplication::{
+    BlockOccurrence, DuplicateBlock, DuplicationMode, DuplicationReport,
+};
 use crate::analyzer::tokenize::Token;
 
 // ── SQ Defaults ──────────────────────────────────────────────────────
@@ -224,7 +226,11 @@ fn compare_resource_id(a: &PathBuf, b: &PathBuf) -> i64 {
 
 fn sort_blocks(blocks: &mut Vec<SqBlock>) {
     blocks.sort_by(|a, b| {
-        match a.resource_id.to_string_lossy().cmp(&b.resource_id.to_string_lossy()) {
+        match a
+            .resource_id
+            .to_string_lossy()
+            .cmp(&b.resource_id.to_string_lossy())
+        {
             std::cmp::Ordering::Equal => a.index_in_file.cmp(&b.index_in_file),
             other => other,
         }
@@ -332,7 +338,9 @@ fn pmd_block_chunker(resource_id: &PathBuf, fragments: &[TokensLine]) -> Vec<SqB
 
     let mut hash: i64 = 0;
     for k in 0..BLOCK_SIZE - 1 {
-        hash = hash.wrapping_mul(PRIME_BASE).wrapping_add(filtered[k].get_hash_code() as i64);
+        hash = hash
+            .wrapping_mul(PRIME_BASE)
+            .wrapping_add(filtered[k].get_hash_code() as i64);
     }
 
     let mut blocks = Vec::with_capacity(filtered.len() - BLOCK_SIZE + 1);
@@ -421,7 +429,13 @@ fn find_clones_for_file(
             if intersected.size() < current_blocks_group.size() {
                 if let Some(first_block) = current_blocks_group.first(origin_resource_id) {
                     if first_block.index_in_file == j - 2 {
-                        report_clones(&c[i], &current_blocks_group, j - i, origin_resource_id, &mut results);
+                        report_clones(
+                            &c[i],
+                            &current_blocks_group,
+                            j - i,
+                            origin_resource_id,
+                            &mut results,
+                        );
                     }
                 }
             }
@@ -477,7 +491,11 @@ fn report_clones(
 
     // Sort parts by (resourceId, unitStart) — matches ContainsInComparator.CLONEPART_COMPARATOR
     parts.sort_by(|a, b| {
-        match a.resource_id.to_string_lossy().cmp(&b.resource_id.to_string_lossy()) {
+        match a
+            .resource_id
+            .to_string_lossy()
+            .cmp(&b.resource_id.to_string_lossy())
+        {
             std::cmp::Ordering::Equal => a.start_unit.cmp(&b.start_unit),
             other => other,
         }
@@ -600,7 +618,10 @@ pub fn detect_sonar_sq(
     let per_file: Vec<(PathBuf, Vec<TokensLine>)> = files
         .iter()
         .map(|(path, tokens)| {
-            (path.clone(), tokens_to_tokens_lines(tokens, normalize_identifiers))
+            (
+                path.clone(),
+                tokens_to_tokens_lines(tokens, normalize_identifiers),
+            )
         })
         .collect();
 
@@ -712,10 +733,3 @@ fn is_identifier(s: &str) -> bool {
     }
     chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
-
-
-
-
-
-
-

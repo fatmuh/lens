@@ -215,7 +215,9 @@ pub fn detect_with_mode(
 ) -> DuplicationReport {
     match mode {
         DuplicationMode::Token => detect(files, k, window, min_tokens),
-        DuplicationMode::Sonar => crate::analyzer::sonar_dup::detect_sonar_sq(files, min_lines, normalize_identifiers),
+        DuplicationMode::Sonar => {
+            crate::analyzer::sonar_dup::detect_sonar_sq(files, min_lines, normalize_identifiers)
+        }
     }
 }
 
@@ -266,13 +268,7 @@ pub fn detect_sonar(
     // This matches SonarQube: file.getFileAttributes().getLines().
     let total_lines: u64 = files
         .iter()
-        .map(|(_, tokens)| {
-            tokens
-                .iter()
-                .map(|t| t.line)
-                .max()
-                .unwrap_or(0) as u64
-        })
+        .map(|(_, tokens)| tokens.iter().map(|t| t.line).max().unwrap_or(0) as u64)
         .sum();
 
     // 2. Apply SonarQube's consecutive-duplicate filter (from BlockChunker).
@@ -391,11 +387,15 @@ pub fn detect_sonar(
             });
             // Collect unique duplicated line numbers for each file.
             // This matches SonarQube's approach: HashSet<Integer> per file.
-            let set_a = dup_lines_per_file.entry(file_a).or_insert_with(HashSet::new);
+            let set_a = dup_lines_per_file
+                .entry(file_a)
+                .or_insert_with(HashSet::new);
             for line in min_start_a..=max_end_a {
                 set_a.insert(line);
             }
-            let set_b = dup_lines_per_file.entry(file_b).or_insert_with(HashSet::new);
+            let set_b = dup_lines_per_file
+                .entry(file_b)
+                .or_insert_with(HashSet::new);
             for line in min_start_b..=max_end_b {
                 set_b.insert(line);
             }

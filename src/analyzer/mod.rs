@@ -127,9 +127,15 @@ pub fn analyze(files: &[PathBuf], config: &AnalyzeConfig) -> ProjectAnalysis {
     // For our TypeScript-first pivot, that means .ts/.tsx/.js/.jsx only.
     let tokens: Vec<(PathBuf, Vec<tokenize::Token>)> = analyses
         .iter()
-        .filter(|a| a.path.to_str().map_or(true, |p| !is_test_or_generated_file(p)))
         .filter(|a| {
-            let ext = a.path.extension()
+            a.path
+                .to_str()
+                .map_or(true, |p| !is_test_or_generated_file(p))
+        })
+        .filter(|a| {
+            let ext = a
+                .path
+                .extension()
                 .and_then(|e| e.to_str())
                 .map(|e| e.to_ascii_lowercase())
                 .unwrap_or_default();
@@ -224,10 +230,7 @@ fn analyze_file(path: &PathBuf, config: &AnalyzeConfig) -> FileAnalysis {
 /// These are excluded from duplication detection to match SonarQube behavior.
 pub fn is_test_or_generated_file(path: &str) -> bool {
     let path_lower = path.to_lowercase();
-    let name = path_lower
-        .rsplit(['/', '\\'])
-        .next()
-        .unwrap_or(&path_lower);
+    let name = path_lower.rsplit(['/', '\\']).next().unwrap_or(&path_lower);
 
     // Test file patterns
     if name.ends_with(".spec.ts")
