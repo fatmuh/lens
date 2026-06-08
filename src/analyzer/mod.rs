@@ -123,9 +123,18 @@ pub fn analyze(files: &[PathBuf], config: &AnalyzeConfig) -> ProjectAnalysis {
     // SonarQube excludes test/generated files from duplication.
     // We use the significant_code config to determine which files
     // are production code vs test/generated.
+    // SonarQube only runs CPD on files recognized by the language analyzer.
+    // For our TypeScript-first pivot, that means .ts/.tsx/.js/.jsx only.
     let tokens: Vec<(PathBuf, Vec<tokenize::Token>)> = analyses
         .iter()
         .filter(|a| a.path.to_str().map_or(true, |p| !is_test_or_generated_file(p)))
+        .filter(|a| {
+            let ext = a.path.extension()
+                .and_then(|e| e.to_str())
+                .map(|e| e.to_ascii_lowercase())
+                .unwrap_or_default();
+            matches!(ext.as_str(), "ts" | "tsx" | "js" | "jsx")
+        })
         .filter_map(|a| {
             let toks = a.tokens.clone()?;
             Some((a.path.clone(), toks))
@@ -263,6 +272,10 @@ pub fn is_test_or_generated_file(path: &str) -> bool {
         || name.ends_with(".scss")
         || name.ends_with(".md")
         || name.ends_with(".lock")
+        || name.ends_with(".prisma")
+        || name.ends_with(".graphql")
+        || name.ends_with(".gql")
+        || name.ends_with(".sql")
     {
         return true;
     }
