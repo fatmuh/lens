@@ -260,6 +260,10 @@ pub struct FixArgs {
     /// AI model to use.
     #[arg(long, env = "LENS_AI_MODEL", default_value = "gpt-4o")]
     pub ai_model: String,
+
+    /// Show diff preview without writing files.
+    #[arg(long)]
+    pub dry_run: bool,
 }
 
 #[derive(Debug, Args)]
@@ -333,6 +337,10 @@ pub struct TestArgs {
     /// AI model to use (overrides ~/.lens/config.toml).
     #[arg(long, env = "LENS_AI_MODEL")]
     pub ai_model: Option<String>,
+
+    /// Show diff preview without writing files.
+    #[arg(long)]
+    pub dry_run: bool,
 }
 
 #[derive(Debug, Args)]

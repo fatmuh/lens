@@ -7,12 +7,15 @@ use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
 use super::client::{chat, AiConfig};
+use super::diff::PendingChange;
 
 /// Result of a coverage fix run.
 #[derive(Debug)]
 pub struct CoverageFixResult {
     pub test_files_written: Vec<PathBuf>,
     pub lines_covered: u32,
+    /// Pending changes collected (used for dry-run preview).
+    pub pending: Vec<PendingChange>,
 }
 
 /// Find uncovered lines from an LCOV file and generate tests.
@@ -32,6 +35,7 @@ pub async fn fix_uncovered(
         return Ok(CoverageFixResult {
             test_files_written: vec![],
             lines_covered: 0,
+            pending: vec![],
         });
     }
 
@@ -44,6 +48,7 @@ pub async fn fix_uncovered(
     let mut result = CoverageFixResult {
         test_files_written: vec![],
         lines_covered: 0,
+        pending: vec![],
     };
 
     for (file, lines) in uncovered.iter().take(max_files) {
@@ -79,18 +84,16 @@ pub async fn fix_uncovered(
                 // Extract code from markdown code block if present
                 let test_code = extract_code_block(&test_code);
                 let test_path = derive_test_path(project_root, file);
-                if let Some(parent) = test_path.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                std::fs::write(&test_path, &test_code)?;
+                let change = PendingChange::new(&test_path, test_code);
                 println!(
-                    "  {} Written {} ({} bytes)",
+                    "  {} Prepared {} ({} bytes)",
                     "✓".green(),
                     test_path.display(),
-                    test_code.len(),
+                    change.new_content().len(),
                 );
                 result.test_files_written.push(test_path);
                 result.lines_covered += lines.len() as u32;
+                result.pending.push(change);
             }
             Err(e) => {
                 eprintln!("  {} AI error for {}: {}", "✗".red(), file, e);

@@ -84,15 +84,19 @@ fn run(cli: Cli) -> Result<ExitCode> {
             println!("\n  {} Lens AI Fix Agent", "🤖".to_string().cyan());
             println!("  {} Model: {}", "->".to_string().dimmed(), config.model);
 
+            let dry_run = args.dry_run;
+            let mut all_pending: Vec<agent::diff::PendingChange> = vec![];
+
             match args.mode {
                 cli::AgentMode::Coverage | cli::AgentMode::All => {
                     if let Some(lcov) = &args.coverage {
-                        rt.block_on(agent::coverage::fix_uncovered(
+                        let r = rt.block_on(agent::coverage::fix_uncovered(
                             &config,
                             &root,
                             lcov,
                             args.max_files,
                         ))?;
+                        all_pending.extend(r.pending);
                     } else {
                         println!(
                             "  {} No --coverage specified, skipping coverage agent",
@@ -104,15 +108,19 @@ fn run(cli: Cli) -> Result<ExitCode> {
             }
             match args.mode {
                 cli::AgentMode::Dedup | cli::AgentMode::All => {
-                    rt.block_on(agent::dedup::fix_duplicates(
+                    let r = rt.block_on(agent::dedup::fix_duplicates(
                         &config,
                         &root,
                         20,
                         args.max_files,
                     ))?;
+                    all_pending.extend(r.pending);
                 }
                 _ => {}
             }
+
+            // Preview and apply (or dry-run)
+            agent::diff::apply_or_preview(all_pending, dry_run);
             Ok(ExitCode::SUCCESS)
         }
         Command::Watch(args) => {
@@ -365,6 +373,8 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
 
         let rt = tokio::runtime::Runtime::new().context("creating runtime")?;
 
+        let mut all_pending: Vec<agent::diff::PendingChange> = vec![];
+
         match args.mode {
             cli::AgentMode::Coverage | cli::AgentMode::All => {
                 let fix_result = rt.block_on(agent::coverage::fix_uncovered(
@@ -379,20 +389,25 @@ fn run_test_command(args: cli::TestArgs) -> Result<ExitCode> {
                     fix_result.test_files_written.len(),
                     fix_result.lines_covered,
                 );
+                all_pending.extend(fix_result.pending);
                 if !fix_result.test_files_written.is_empty() {
                     println!("  {} Re-run tests to verify:", "->".bold());
                     println!("    lens test .");
                 }
             }
             cli::AgentMode::Dedup => {
-                rt.block_on(agent::dedup::fix_duplicates(
+                let r = rt.block_on(agent::dedup::fix_duplicates(
                     &ai_config,
                     &root,
                     20,
                     args.max_files,
                 ))?;
+                all_pending.extend(r.pending);
             }
         }
+
+        // Preview and apply (or dry-run)
+        agent::diff::apply_or_preview(all_pending, args.dry_run);
     }
 
     if !result.success {

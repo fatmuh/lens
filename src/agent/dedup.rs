@@ -7,6 +7,7 @@ use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
 use super::client::{chat, AiConfig};
+use super::diff::PendingChange;
 
 /// Result of a dedup fix run.
 #[derive(Debug)]
@@ -14,6 +15,8 @@ pub struct DedupFixResult {
     pub files_modified: Vec<PathBuf>,
     pub shared_files_created: Vec<PathBuf>,
     pub blocks_refactored: u32,
+    /// Pending changes collected (used for dry-run preview).
+    pub pending: Vec<PendingChange>,
 }
 
 /// Find duplicated blocks and refactor them.
@@ -37,6 +40,7 @@ pub async fn fix_duplicates(
             files_modified: vec![],
             shared_files_created: vec![],
             blocks_refactored: 0,
+            pending: vec![],
         });
     }
 
@@ -51,6 +55,7 @@ pub async fn fix_duplicates(
         files_modified: vec![],
         shared_files_created: vec![],
         blocks_refactored: 0,
+        pending: vec![],
     };
 
     for block in dup_blocks.iter().take(max_blocks) {
@@ -98,12 +103,9 @@ pub async fn fix_duplicates(
                 let files = parse_multi_file_response(&response);
                 for (path_hint, content) in &files {
                     let out_path = project_root.join(path_hint);
-                    if let Some(parent) = out_path.parent() {
-                        std::fs::create_dir_all(parent)?;
-                    }
-                    std::fs::write(&out_path, content)?;
+                    let change = PendingChange::new(&out_path, content.clone());
                     println!(
-                        "  {} Written/updated {} ({} bytes)",
+                        "  {} Prepared {} ({} bytes)",
                         "✓".green(),
                         out_path.display(),
                         content.len(),
@@ -113,6 +115,7 @@ pub async fn fix_duplicates(
                     } else {
                         result.files_modified.push(out_path);
                     }
+                    result.pending.push(change);
                 }
                 result.blocks_refactored += 1;
             }
