@@ -322,16 +322,23 @@ fn run_analyzer(files: &[PathBuf], cfg: &AnalyzeConfig, args: &ScanArgs) -> Proj
                 if snap.hash == cur_hash {
                     // File unchanged — reconstruct from state.
                     // Tokenize for duplication detection (cheap, no parsing).
-                    let tokens = std::fs::read_to_string(f)
+                    let (tokens, nosonar_count) = std::fs::read_to_string(f)
                         .ok()
-                        .map(|c| crate::analyzer::tokenize::tokenize(&c));
+                        .map(|c| {
+                            let lang = crate::scanner::language::detect(f);
+                            (
+                                Some(crate::analyzer::tokenize::tokenize(&c)),
+                                crate::scanner::nosonar::count(&c, lang),
+                            )
+                        })
+                        .unwrap_or((None, 0));
                     ca.push(FileAnalysis {
                         path: f.clone(),
                         language: crate::scanner::language::detect(f),
-                        analyzed: false, // not re-analyzed this run
+                        analyzed: false,
                         metrics: None,
                         tokens,
-                        nosonar_count: 0,
+                        nosonar_count,
                         issues: snap.issues.iter().map(|ti| Issue {
                             rule_id: ti.rule_id.clone(),
                             severity: Severity::Info, // best-effort
