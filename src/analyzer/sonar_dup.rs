@@ -1,18 +1,17 @@
-//! SonarQube's OriginalCloneDetectionAlgorithm — faithful Rust port.
+//! SonarQube's duplication detection — faithful Rust port.
 //!
-//! Pipeline (matches SonarQube exactly):
+//! Pipeline (matches SonarQube's SuffixTreeCloneDetectionAlgorithm):
 //!   1. Tokenize files → tokens with (line, text)
 //!   2. Group tokens per line → TokensLine(startUnit, endUnit, startLine, value)
 //!   3. Collapse consecutive duplicate TokensLines (BlockChunker filter)
 //!   4. PmdBlockChunker: Rabin-Karp rolling hash over TokensLines, blockSize=10
 //!   5. Build CloneIndex: HashMap<hash, Vec<Block>> across all files
 //!   6. OriginalCloneDetectionAlgorithm: per-file active-set intersection
-//!   7. Filter: remove clones fully contained in larger clones
+//!   7. Filter: remove clones fully contained in larger clones (exact unit-based)
 //!   8. NumberOfUnitsNotLessThan(100): filter clones < 100 tokens
 //!   9. DuplicationMeasures: density = 100 * duplicatedLines / totalLines (HashSet per file)
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
 use crate::analyzer::duplication::{BlockOccurrence, DuplicateBlock, DuplicationMode, DuplicationReport};
@@ -25,7 +24,7 @@ const BLOCK_SIZE: usize = 10;
 /// Minimum clone size in tokens. SQ default = 100.
 const MINIMUM_TOKENS: usize = 100;
 /// Rabin-Karp prime base.
-const PRIME_BASE: u64 = 31;
+const PRIME_BASE: i64 = 31;
 
 // ── Data structures ──────────────────────────────────────────────────
 
@@ -76,9 +75,11 @@ struct SqBlock {
 }
 
 /// Analogous to SQ's ClonePart.
+/// Tracks startUnit and endUnit for exact containment checks.
 #[derive(Debug, Clone)]
 struct SqClonePart {
     resource_id: PathBuf,
+    index_in_file: usize,
     start_unit: usize,
     start_line: u32,
     end_line: u32,
@@ -89,6 +90,8 @@ struct SqClonePart {
 struct SqCloneGroup {
     /// Length in blocks.
     clone_unit_length: usize,
+    /// Length in tokens (units). SQ: endUnit - startUnit + 1.
+    length_in_units: usize,
     /// The parts (occurrences) of this clone.
     parts: Vec<SqClonePart>,
 }
@@ -115,7 +118,6 @@ impl BlocksGroup {
 
     /// Intersection: blocks from `other` that have a corresponding block
     /// in `self` with same resource_id and index_in_file = self.index + 1.
-    /// Faithful port of BlocksGroup.intersect().
     fn intersect(&self, other: &BlocksGroup) -> BlocksGroup {
         let mut intersection = BlocksGroup::empty();
         let list1 = &self.blocks;
@@ -134,7 +136,6 @@ impl BlocksGroup {
                 i += 1;
                 continue;
             }
-            // Same resource_id — check index correction (+1)
             let idx = block1.index_in_file as i64 + 1 - block2.index_in_file as i64;
             if idx == 0 {
                 intersection.blocks.push(block2.clone());
@@ -150,7 +151,6 @@ impl BlocksGroup {
     }
 
     /// Check if this group is subsumed by `other` with index correction.
-    /// Faithful port of BlocksGroup.subsumedBy().
     fn subsumed_by(&self, other: &BlocksGroup, index_correction: usize) -> bool {
         let list1 = &self.blocks;
         let list2 = &other.blocks;
@@ -181,7 +181,6 @@ impl BlocksGroup {
     }
 
     /// Match begin blocks with end blocks for clone reporting.
-    /// Faithful port of BlocksGroup.pairs().
     fn pairs(&self, end_group: &BlocksGroup, len: usize) -> Vec<(SqBlock, SqBlock)> {
         let mut result = vec![];
         let begins = &self.blocks;
@@ -213,7 +212,6 @@ impl BlocksGroup {
     }
 }
 
-/// Compare two PathBuf as strings (lexicographic, like Java's FastStringComparator).
 fn compare_resource_id(a: &PathBuf, b: &PathBuf) -> i64 {
     let s1 = a.to_string_lossy();
     let s2 = b.to_string_lossy();
@@ -224,7 +222,6 @@ fn compare_resource_id(a: &PathBuf, b: &PathBuf) -> i64 {
     }
 }
 
-/// Sort blocks by (resource_id, index_in_file). Matches BlocksGroup.BlockComparator.
 fn sort_blocks(blocks: &mut Vec<SqBlock>) {
     blocks.sort_by(|a, b| {
         match a.resource_id.to_string_lossy().cmp(&b.resource_id.to_string_lossy()) {
@@ -236,7 +233,6 @@ fn sort_blocks(blocks: &mut Vec<SqBlock>) {
 
 // ── CloneIndex ───────────────────────────────────────────────────────
 
-/// Index of all blocks across all files, keyed by hash.
 struct CloneIndex {
     by_hash: HashMap<i64, Vec<SqBlock>>,
 }
@@ -259,7 +255,6 @@ impl CloneIndex {
 
 // ── Step 2: Tokens per line (DefaultCpdTokens) ──────────────────────
 
-/// Group tokens by line → TokensLine, exactly like SQ's DefaultCpdTokens.
 fn tokens_to_tokens_lines(tokens: &[Token], normalize_identifiers: bool) -> Vec<TokensLine> {
     if tokens.is_empty() {
         return vec![];
@@ -303,7 +298,6 @@ fn tokens_to_tokens_lines(tokens: &[Token], normalize_identifiers: bool) -> Vec<
 
 // ── Step 3: Collapse consecutive duplicates (BlockChunker filter) ───
 
-/// Faithful port of PmdBlockChunker's collapse logic.
 fn collapse_consecutive_duplicates(fragments: &[TokensLine]) -> Vec<TokensLine> {
     let mut filtered = Vec::with_capacity(fragments.len());
     let mut i = 0;
@@ -324,8 +318,6 @@ fn collapse_consecutive_duplicates(fragments: &[TokensLine]) -> Vec<TokensLine> 
 
 // ── Step 4: PmdBlockChunker ──────────────────────────────────────────
 
-/// Faithful port of PmdBlockChunker.chunk().
-/// Rabin-Karp rolling hash over TokensLines with blockSize.
 fn pmd_block_chunker(resource_id: &PathBuf, fragments: &[TokensLine]) -> Vec<SqBlock> {
     let filtered = collapse_consecutive_duplicates(fragments);
 
@@ -333,16 +325,14 @@ fn pmd_block_chunker(resource_id: &PathBuf, fragments: &[TokensLine]) -> Vec<SqB
         return vec![];
     }
 
-    // Compute power = PRIME_BASE^(BLOCK_SIZE-1)
     let mut power: i64 = 1;
     for _ in 0..BLOCK_SIZE - 1 {
-        power = power.wrapping_mul(PRIME_BASE as i64);
+        power = power.wrapping_mul(PRIME_BASE);
     }
 
-    // Initial hash for first (BLOCK_SIZE-1) fragments
     let mut hash: i64 = 0;
     for k in 0..BLOCK_SIZE - 1 {
-        hash = hash.wrapping_mul(PRIME_BASE as i64).wrapping_add(filtered[k].get_hash_code() as i64);
+        hash = hash.wrapping_mul(PRIME_BASE).wrapping_add(filtered[k].get_hash_code() as i64);
     }
 
     let mut blocks = Vec::with_capacity(filtered.len() - BLOCK_SIZE + 1);
@@ -353,23 +343,20 @@ fn pmd_block_chunker(resource_id: &PathBuf, fragments: &[TokensLine]) -> Vec<SqB
         let first_fragment = &filtered[first];
         let last_fragment = &filtered[last];
 
-        // Add last statement to hash
         hash = hash
-            .wrapping_mul(PRIME_BASE as i64)
+            .wrapping_mul(PRIME_BASE)
             .wrapping_add(last_fragment.get_hash_code() as i64);
 
-        // Create block
         blocks.push(SqBlock {
             resource_id: resource_id.clone(),
             index_in_file: first,
             start_line: first_fragment.start_line,
-            end_line: last_fragment.start_line,
+            end_line: last_fragment.start_line, // TokensLine has single line
             start_unit: first_fragment.start_unit,
             end_unit: last_fragment.end_unit,
             hash,
         });
 
-        // Remove first statement from hash
         hash = hash.wrapping_sub(power.wrapping_mul(first_fragment.get_hash_code() as i64));
 
         first += 1;
@@ -381,7 +368,6 @@ fn pmd_block_chunker(resource_id: &PathBuf, fragments: &[TokensLine]) -> Vec<SqB
 
 // ── Step 5+6: OriginalCloneDetectionAlgorithm ────────────────────────
 
-/// Faithful port of OriginalCloneDetectionAlgorithm.findClones().
 fn find_clones_for_file(
     index: &CloneIndex,
     origin_resource_id: &PathBuf,
@@ -392,10 +378,8 @@ fn find_clones_for_file(
         return vec![];
     }
 
-    // Create groups: one BlocksGroup per unique hash
     let mut groups_by_hash: HashMap<i64, BlocksGroup> = HashMap::new();
 
-    // Add current file's blocks
     for fb in file_blocks {
         groups_by_hash
             .entry(fb.hash)
@@ -404,7 +388,6 @@ fn find_clones_for_file(
             .push(fb.clone());
     }
 
-    // Add blocks from index (other files only)
     for (hash, group) in groups_by_hash.iter_mut() {
         for idx_block in index.get(*hash) {
             if idx_block.resource_id != *origin_resource_id {
@@ -414,7 +397,6 @@ fn find_clones_for_file(
         sort_blocks(&mut group.blocks);
     }
 
-    // Build sameHashBlocksGroups array: c[0]=empty, c[1..size]=groups, c[size+1]=empty
     let mut c: Vec<BlocksGroup> = vec![BlocksGroup::empty(); size + 2];
     for fb in file_blocks {
         let i = fb.index_in_file + 1;
@@ -423,28 +405,20 @@ fn find_clones_for_file(
             .cloned()
             .unwrap_or_else(BlocksGroup::empty);
     }
-    // c[size+1] is already empty
 
     let mut results: Vec<SqCloneGroup> = Vec::new();
 
-    // Outer loop: for i := 1 to length(c) do
     for i in 1..=size {
-        // 8: if |c(i)| < 2 or c(i) subsumed by c(i-1) then continue
         if c[i].size() < 2 || c[i].subsumed_by(&c[i - 1], 1) {
             continue;
         }
 
-        // 10: let a := c(i)
         let mut current_blocks_group = c[i].clone();
 
-        // 11: for j := i+1 to length(c) do
         for j in (i + 1)..=size + 1 {
-            // 12: let a0 := a intersect c(j)
             let intersected = current_blocks_group.intersect(&c[j]);
 
-            // 13: if |a0| < |a| then
             if intersected.size() < current_blocks_group.size() {
-                // 14: report clones from c(i) to a
                 if let Some(first_block) = current_blocks_group.first(origin_resource_id) {
                     if first_block.index_in_file == j - 2 {
                         report_clones(&c[i], &current_blocks_group, j - i, origin_resource_id, &mut results);
@@ -452,10 +426,8 @@ fn find_clones_for_file(
                 }
             }
 
-            // 15: a := a0
             current_blocks_group = intersected;
 
-            // 16: if |a| < 2 or a subsumed by c(i-1) then break
             if current_blocks_group.size() < 2
                 || current_blocks_group.subsumed_by(&c[i - 1], j - i + 1)
             {
@@ -467,7 +439,7 @@ fn find_clones_for_file(
     results
 }
 
-/// Faithful port of OriginalCloneDetectionAlgorithm.reportClones().
+/// Faithful port of reportClones — builds CloneGroup with exact lengthInUnits.
 fn report_clones(
     begin_group: &BlocksGroup,
     end_group: &BlocksGroup,
@@ -478,18 +450,24 @@ fn report_clones(
     let pairs = begin_group.pairs(end_group, clone_length);
 
     let mut origin: Option<SqClonePart> = None;
+    let mut length_in_units: usize = 0;
     let mut parts: Vec<SqClonePart> = Vec::new();
 
-    for (first_block, last_block) in pairs {
+    for (first_block, last_block) in &pairs {
         let part = SqClonePart {
             resource_id: first_block.resource_id.clone(),
+            index_in_file: first_block.index_in_file,
             start_unit: first_block.start_unit,
             start_line: first_block.start_line,
             end_line: last_block.end_line,
         };
 
         if part.resource_id == *origin_resource_id {
-            if origin.is_none() || part.start_unit < origin.as_ref().unwrap().start_unit {
+            if origin.is_none() {
+                origin = Some(part.clone());
+                // SQ: lengthInUnits = lastBlock.getEndUnit() - firstBlock.getStartUnit() + 1
+                length_in_units = last_block.end_unit - first_block.start_unit + 1;
+            } else if part.start_unit < origin.as_ref().unwrap().start_unit {
                 origin = Some(part.clone());
             }
         }
@@ -497,46 +475,47 @@ fn report_clones(
         parts.push(part);
     }
 
+    // Sort parts by (resourceId, unitStart) — matches ContainsInComparator.CLONEPART_COMPARATOR
+    parts.sort_by(|a, b| {
+        match a.resource_id.to_string_lossy().cmp(&b.resource_id.to_string_lossy()) {
+            std::cmp::Ordering::Equal => a.start_unit.cmp(&b.start_unit),
+            other => other,
+        }
+    });
+
     if !parts.is_empty() {
         results.push(SqCloneGroup {
             clone_unit_length: clone_length,
+            length_in_units,
             parts,
         });
     }
 }
 
-// ── Step 7: Filter (containsIn) ──────────────────────────────────────
+// ── Step 7: Filter (containsIn) — exact unit-based ───────────────────
 
-/// Faithful port of SQ's Filter.
-/// Removes clones fully contained in larger clones.
+/// Faithful port of DuplicationsCollector.filter().
+/// Checks that earlier groups don't contain the current one.
 fn filter_contained(groups: Vec<SqCloneGroup>) -> Vec<SqCloneGroup> {
     let mut filtered: Vec<SqCloneGroup> = Vec::new();
     for current in groups {
         let mut dominated = false;
-        let mut to_remove: Vec<usize> = vec![];
-        for (idx, earlier) in filtered.iter().enumerate() {
+        for earlier in &filtered {
             if contains_in(&current, earlier) {
                 dominated = true;
                 break;
             }
-            if contains_in(earlier, &current) {
-                to_remove.push(idx);
-            }
         }
         if !dominated {
-            for &idx in to_remove.iter().rev() {
-                filtered.remove(idx);
-            }
             filtered.push(current);
         }
     }
     filtered
 }
 
-/// Faithful port of Filter.containsIn().
-/// Clone A is contained in B if:
-///   - A.cloneUnitLength <= B.cloneUnitLength
-///   - every part pA has a part pB with same resourceId and pB.unitStart <= pA.unitStart and pA.unitEnd <= pB.unitEnd
+/// Faithful port of DuplicationsCollector.containsIn() using SortedListsUtils.
+/// CloneGroup A is contained in B if:
+///   - every part pA has a covering part pB with same resourceId and unit range containment
 ///   - all resourceIds from B exist in A
 fn contains_in(first: &SqCloneGroup, second: &SqCloneGroup) -> bool {
     if first.clone_unit_length > second.clone_unit_length {
@@ -546,94 +525,72 @@ fn contains_in(first: &SqCloneGroup, second: &SqCloneGroup) -> bool {
     let first_parts = &first.parts;
     let second_parts = &second.parts;
 
-    // Check: every part in first has a covering part in second
-    // AND every resourceId in second exists in first
-    // Parts are sorted by (resourceId, startUnit)
-    let mut i = 0;
-    let mut j = 0;
-    let mut first_covered = true;
-    let mut second_resources_covered = true;
+    // Check 1: every part in first has a covering part in second
+    // Using ContainsInComparator logic:
+    //   pB contains pA if (pB.resourceId == pA.resourceId) &&
+    //     (pB.unitStart <= pA.unitStart) &&
+    //     (pA.unitStart + first.clone_unit_length <= pB.unitStart + second.clone_unit_length)
+    // Wait — SQ uses lengthInUnits for containment, but ClonePart doesn't store endUnit.
+    // The ContainsInComparator computes: pA.unitStart + l2 <= pB.unitStart + l1
+    // where l1 = second.cloneUnitLength, l2 = first.cloneUnitLength.
+    // But SQ actually uses the LENGTH IN UNITS, not clone_unit_length (blocks).
+    // ContainsInComparator(second.getCloneUnitLength(), first.getCloneUnitLength())
+    // But wait — looking at DuplicationsCollector.containsIn():
+    //   new ContainsInComparator(second.getCloneUnitLength(), first.getCloneUnitLength())
+    // CloneGroup.getCloneUnitLength() = cloneLength field = length in blocks.
 
-    // Check first covered by second
-    'outer1: for pa in first_parts {
+    // Parts are sorted by (resourceId, unitStart).
+    // SortedListsUtils.contains: for each element in list, find a matching element in container.
+
+    let mut covered = true;
+    'outer_pa: for pa in first_parts {
         for pb in second_parts {
-            if pb.resource_id == pa.resource_id
-                && pb.start_unit <= pa.start_unit
-            {
-                // For line coverage: we compare unit ranges
-                // pA is covered if pB.endUnit >= pA.endUnit
-                // Since we don't store endUnit in ClonePart, we approximate by cloneUnitLength
-                continue 'outer1;
+            if pb.resource_id != pa.resource_id {
+                continue;
+            }
+            if pb.start_unit > pa.start_unit {
+                // Since parts are sorted by unitStart, no further pb will match
+                break;
+            }
+            // pB.unitStart <= pA.unitStart
+            // Check: pA.unitStart + l2 <= pB.unitStart + l1
+            // => pa.start_unit + first.clone_unit_length <= pb.start_unit + second.clone_unit_length
+            if pa.start_unit + first.clone_unit_length <= pb.start_unit + second.clone_unit_length {
+                continue 'outer_pa; // covered
             }
         }
-        first_covered = false;
+        covered = false;
         break;
     }
 
-    if !first_covered {
+    if !covered {
         return false;
     }
 
-    // Check all resourceIds from second exist in first
-    for pb in second_parts {
-        let mut found = false;
+    // Check 2: all resourceIds from second exist in first
+    // Using RESOURCE_ID_COMPARATOR: just checks resourceId equality
+    'outer_pb: for pb in second_parts {
         for pa in first_parts {
             if pa.resource_id == pb.resource_id {
-                found = true;
-                break;
+                continue 'outer_pb;
             }
         }
-        if !found {
-            second_resources_covered = false;
-            break;
-        }
+        return false;
     }
 
-    second_resources_covered
+    true
 }
 
-// ── Step 8: NumberOfUnitsNotLessThan ──────────────────────────────────
+// ── Step 8: NumberOfUnitsNotLessThan(100) ─────────────────────────────
 
-/// Filter clones with less than `minimum_tokens` tokens.
+/// Filter clones with lengthInUnits < minimum_tokens.
+/// Matches SQ: input.getLengthInUnits() >= min
 fn filter_by_minimum_tokens(groups: &mut Vec<SqCloneGroup>, minimum_tokens: usize) {
-    groups.retain(|g| {
-        // A clone's unit length = endUnit of last block - startUnit of first block + 1
-        // For each part, unit span = clone_unit_length * (avg tokens per block)
-        // Actually SQ calculates: origin.endUnit - origin.startUnit + 1
-        // But we can approximate: if a clone spans N blocks and each block has ~10 TokensLines,
-        // and each line has ~5 tokens, then ~50*N tokens. More accurate: track units.
-        // Simplest: check that at least one part spans >= minimum_tokens units.
-        // SQ checks using the origin part's unit range.
-        g.parts.iter().any(|p| {
-            // Approximate: if we have clone_unit_length blocks of BLOCK_SIZE=10 lines,
-            // and each line has some tokens, the minimum token count is at least clone_unit_length
-            // (each block has at least 1 token). But SQ measures in actual tokens.
-            // Since we track start_unit, we can compute end_unit from the block.
-            // For now, approximate: clone_unit_length * (average tokens per TokensLine)
-            // This is a rough filter — the real SQ checks exact unit counts.
-            clone_unit_length_tokens(g) >= minimum_tokens
-        })
-    });
-}
-
-/// Calculate the token span of a clone group based on its unit length.
-fn clone_unit_length_tokens(g: &SqCloneGroup) -> usize {
-    if g.parts.is_empty() {
-        return 0;
-    }
-    // Use the first part's start_unit and estimate end_unit from block count
-    // Each block spans BLOCK_SIZE TokensLines, each with tokens.
-    // The clone covers clone_unit_length consecutive blocks.
-    // Approximate end_unit = start_unit + clone_unit_length * BLOCK_SIZE * (avg tokens per line)
-    // This is rough — ideally we'd track endUnit in ClonePart.
-    // For now, use clone_unit_length as a proxy (SQ uses actual unit counts)
-    g.clone_unit_length * BLOCK_SIZE
+    groups.retain(|g| g.length_in_units >= minimum_tokens);
 }
 
 // ── Main entry point ─────────────────────────────────────────────────
 
-/// Run SonarQube-compatible duplication detection.
-/// Full pipeline: TokensLine → PmdBlockChunker → OriginalCloneDetectionAlgorithm → Filter → MinTokens.
 pub fn detect_sonar_sq(
     files: &[(PathBuf, Vec<Token>)],
     _min_lines: usize,
@@ -647,7 +604,7 @@ pub fn detect_sonar_sq(
         })
         .collect();
 
-    // Total lines = max line number across all tokens (SQ: file.getFileAttributes().getLines())
+    // Total lines = max line number across all tokens (SQ: file.getLines())
     let total_lines: u64 = files
         .iter()
         .map(|(_, tokens)| tokens.iter().map(|t| t.line).max().unwrap_or(0) as u64)
@@ -665,7 +622,6 @@ pub fn detect_sonar_sq(
         file_blocks.push((path.clone(), blocks));
     }
 
-    // Sort index entries by (resource_id, index_in_file)
     for blocks in index.by_hash.values_mut() {
         sort_blocks(blocks);
     }
@@ -687,7 +643,6 @@ pub fn detect_sonar_sq(
     filter_by_minimum_tokens(&mut filtered, MINIMUM_TOKENS);
 
     // ── Step 9: Build report (DuplicationMeasures) ──
-    // Calculate unique duplicated line numbers per file (HashSet<Integer> per file)
     let mut dup_lines_per_file: HashMap<PathBuf, HashSet<u32>> = HashMap::new();
 
     let mut report_blocks: Vec<DuplicateBlock> = Vec::new();
@@ -717,11 +672,9 @@ pub fn detect_sonar_sq(
         });
     }
 
-    // Sort blocks by size, take top 20
     report_blocks.sort_by(|a, b| b.token_count.cmp(&a.token_count));
     report_blocks.truncate(20);
 
-    // Top offenders
     let mut offenders: Vec<(PathBuf, u64)> = dup_lines_per_file
         .iter()
         .map(|(p, set)| (p.clone(), set.len() as u64))
@@ -750,8 +703,6 @@ pub fn detect_sonar_sq(
         blocks: report_blocks,
     }
 }
-
-// ── Helpers ──────────────────────────────────────────────────────────
 
 fn is_identifier(s: &str) -> bool {
     let mut chars = s.chars();
