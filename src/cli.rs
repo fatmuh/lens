@@ -302,7 +302,7 @@ pub struct TestArgs {
     pub path: PathBuf,
 
     /// Run with coverage (generates LCOV report).
-    #[arg(long, short = 'c', default_value_t = true)]
+    #[arg(long, default_value_t = true)]
     pub coverage: bool,
 
     /// After running tests, feed coverage gaps to AI agent.
