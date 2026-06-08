@@ -447,6 +447,11 @@ fn run_analyzer(files: &[PathBuf], cfg: &AnalyzeConfig, args: &ScanArgs) -> Proj
         let tokens: Vec<(PathBuf, Vec<crate::analyzer::tokenize::Token>)> = result
             .files
             .iter()
+            .filter(|a| {
+                a.path
+                    .to_str()
+                    .map_or(true, |p| !crate::analyzer::is_test_or_generated_file(p))
+            })
             .filter_map(|a| {
                 let toks = a.tokens.as_ref()?;
                 Some((a.path.clone(), toks.clone()))

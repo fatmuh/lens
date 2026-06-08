@@ -119,8 +119,12 @@ pub fn analyze(files: &[PathBuf], config: &AnalyzeConfig) -> ProjectAnalysis {
     };
 
     // 3. Duplication detection across all analyzed files.
+    // SonarQube excludes test/generated files from duplication.
+    // We use the significant_code config to determine which files
+    // are production code vs test/generated.
     let tokens: Vec<(PathBuf, Vec<tokenize::Token>)> = analyses
         .iter()
+        .filter(|a| a.path.to_str().map_or(true, |p| !is_test_or_generated_file(p)))
         .filter_map(|a| {
             let toks = a.tokens.clone()?;
             Some((a.path.clone(), toks))
@@ -204,4 +208,48 @@ fn analyze_file(path: &PathBuf, config: &AnalyzeConfig) -> FileAnalysis {
         nosonar_count,
         issues,
     }
+}
+
+/// Check if a file path looks like a test or generated file.
+/// These are excluded from duplication detection to match SonarQube behavior.
+pub fn is_test_or_generated_file(path: &str) -> bool {
+    let path_lower = path.to_lowercase();
+    let name = path_lower
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(&path_lower);
+
+    // Test file patterns
+    if name.ends_with(".spec.ts")
+        || name.ends_with(".spec.tsx")
+        || name.ends_with(".test.ts")
+        || name.ends_with(".test.tsx")
+        || name.ends_with(".spec.js")
+        || name.ends_with(".spec.jsx")
+        || name.ends_with(".test.js")
+        || name.ends_with(".test.jsx")
+    {
+        return true;
+    }
+
+    // Test directories
+    if path_lower.contains("__tests__")
+        || path_lower.contains("/test/")
+        || path_lower.contains("\\test\\")
+        || path_lower.contains("/tests/")
+        || path_lower.contains("\\tests\\")
+    {
+        return true;
+    }
+
+    // Generated files
+    if name.ends_with(".d.ts")
+        || name.ends_with(".generated.ts")
+        || name.ends_with(".generated.tsx")
+        || name.contains(".min.")
+    {
+        return true;
+    }
+
+    false
 }
