@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-06-08
+
+### Added
+
+- **Security taint analysis engine** — tracks data flow from user input (sources) to dangerous operations (sinks) within function bodies
+  - 8 TypeScript/JavaScript vulnerability classes:
+    - SQL Injection, XSS, SSRF, Command Injection, Path Traversal, Prototype Pollution, Open Redirect, Log Injection
+  - 3 Flutter/Dart vulnerability classes:
+    - Flutter SQL Injection, Flutter HTTP Injection, Flutter Path Traversal
+  - Intra-procedural taint propagation (3 hops): `a → b → c`
+  - Sanitizer detection: `escape()`, `sanitize()`, `normalize()` break the chain
+  - Zero false positives on parameterized queries and sanitized input
+  - 9 unit tests
+
+- **Dart / Flutter support** (second language)
+  - Language detection: `.dart` files → `Dart` enum
+  - `tree-sitter-dart` 0.2 grammar for AST parsing
+  - AST metrics: functions, classes (class/mixin/extension), enums, complexity, parameters
+  - Dart CPD tokenizer: strips comments, strings, raw strings, triple-quoted, string interpolation, Dart operators
+  - `.dart` files included in SonarQube-compatible duplication detection
+  - Test file detection: `_test.dart`, `.test.dart`
+  - 14 unit tests for Dart tokenizer
+
+- **6 Dart/Flutter-specific rules**: `dart/avoid-print`, `dart/avoid-empty-catch`, `dart/avoid-unnecessary-containers`, `dart/prefer-const-constructors`, `dart/avoid-web-libraries-in-flutter`, `dart/prefer-async-await`
+
+- **33 new TypeScript/JavaScript rules** (65 → 98 built-in): `no-constant-condition`, `no-dupe-class-members`, `no-duplicate-case`, `no-empty-pattern`, `no-self-assign`, `no-buffer-constructor`, `no-unsafe-negation`, `curly`, `no-mixed-operators`, `one-var`, `operator-assignment`, `no-octal`, etc.
+
+- **Language-aware rule engine** — rules automatically filtered by file language; TS/JS-only rules skip Dart files and vice versa
+
+- **`--dry-run` flag** for `lens fix` and `lens test` — preview AI changes without writing files; unified diff output with colourised insertions/deletions
+
+### Changed
+
+- **598 total rules** (99 TS/JS built-in + 6 Dart + 493 SonarJS stubs)
+- Metrics label: "Metrics (TypeScript)" → "Metrics" (language-agnostic)
+
+### Tests
+
+- **194 tests passing** (181 unit + 13 integration)
+
 ## [0.3.0] — 2026-06-07
 
 ### Added
@@ -333,7 +373,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (most-impacted first).
 - Coverage parsing is essentially free (file I/O + simple parsing).
 
-[Unreleased]: https://github.com/fatmuh/lens/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/fatmuh/lens/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/fatmuh/lens/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/fatmuh/lens/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/fatmuh/lens/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/fatmuh/lens/compare/v0.1.0...v0.1.1
