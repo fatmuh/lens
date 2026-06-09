@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-06-09
+
+### Added
+
+- **Python language support**
+  - `tree-sitter-python` 0.25 grammar for AST parsing
+  - Python metrics: functions, classes, lambdas, cyclomatic complexity
+  - Python CPD tokenizer (`src/analyzer/tokenize_python.rs`): strips comments, strings (single/double/triple/raw/f-strings/bytes), handles docstrings
+  - `_test.py`, `test_*.py` excluded from duplication
+  - 8 Python-specific rules:
+    - `python/avoid-print` — Use logging instead of print()
+    - `python/avoid-bare-except` — Catch specific exceptions
+    - `python/avoid-mutable-default` — Mutable default arguments (Critical)
+    - `python/avoid-global-var` — Avoid global variables
+    - `python/avoid-todo` — Track TODO/FIXME in issue tracker
+    - `python/avoid-star-import` — No wildcard imports
+    - `python/explicit-return-type` — Type annotations for return values
+    - `python/docstring-required` — Docstrings for public functions/classes
+  - 15 unit tests for Python tokenizer
+
+- **GitHub PR Bot**
+  - New `.github/workflows/pr-scan.yml` — auto-runs on PR events
+  - Enhanced `.github/actions/lens-scan/action.yml` — reusable composite action
+  - `scripts/build-pr-comment.py` — formatted PR comment with metrics, issues, dep vulns
+  - Installs Lens from GitHub releases, scans code + dependencies
+  - Deduplicates comments on re-push via marker
+  - SARIF upload to GitHub Code Scanning
+  - Tested on lens repo itself (168 files, 1.076ms)
+
+### Changed
+
+- Updated README.md — comprehensive rewrite for v0.10.0
+- Fixed LICENSE: `Lens Contributors` → `Fatmuh`
+
 ## [0.9.0] — 2026-06-09
 
 ### Added

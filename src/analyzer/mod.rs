@@ -16,6 +16,7 @@ pub mod taint;
 pub mod tokenize;
 pub mod tokenize_dart;
 pub mod tokenize_go;
+pub mod tokenize_python;
 pub mod tokenize_rust;
 
 use std::path::PathBuf;
@@ -143,7 +144,7 @@ pub fn analyze(files: &[PathBuf], config: &AnalyzeConfig) -> ProjectAnalysis {
                 .and_then(|e| e.to_str())
                 .map(|e| e.to_ascii_lowercase())
                 .unwrap_or_default();
-            matches!(ext.as_str(), "ts" | "tsx" | "js" | "jsx" | "dart")
+            matches!(ext.as_str(), "ts" | "tsx" | "js" | "jsx" | "dart" | "py")
         })
         .filter_map(|a| {
             let toks = a.tokens.clone()?;
@@ -198,6 +199,7 @@ fn analyze_file(path: &PathBuf, config: &AnalyzeConfig) -> FileAnalysis {
         Some(Language::Dart) => tokenize_dart::tokenize_dart(&content),
         Some(Language::Go) => tokenize_go::tokenize_go(&content),
         Some(Language::Rust) => tokenize_rust::tokenize_rust(&content),
+        Some(Language::Python) => tokenize_python::tokenize_python(&content),
         _ => tokenize::tokenize(&content),
     };
 
@@ -216,6 +218,9 @@ fn analyze_file(path: &PathBuf, config: &AnalyzeConfig) -> FileAnalysis {
         }),
         Some(Language::Rust) => parser::with_parser(Language::Rust, &content, |tree| {
             metrics::compute(tree, &content, Language::Rust)
+        }),
+        Some(Language::Python) => parser::with_parser(Language::Python, &content, |tree| {
+            metrics::compute(tree, &content, Language::Python)
         }),
         _ => None,
     };
@@ -264,6 +269,8 @@ pub fn is_test_or_generated_file(path: &str) -> bool {
         || name.ends_with("_test.go")
         || name.ends_with("_test.rs")
         || name.starts_with("test_") && name.ends_with(".rs")
+        || name.starts_with("test_") && name.ends_with(".py")
+        || name.ends_with("_test.py")
     {
         return true;
     }

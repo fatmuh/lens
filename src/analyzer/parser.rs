@@ -17,6 +17,7 @@ pub fn get_language(lang: SrcLanguage) -> Option<Language> {
         SrcLanguage::Dart => Some(tree_sitter_dart::LANGUAGE.into()),
         SrcLanguage::Go => Some(tree_sitter_go::LANGUAGE.into()),
         SrcLanguage::Rust => Some(tree_sitter_rust::LANGUAGE.into()),
+        SrcLanguage::Python => Some(tree_sitter_python::LANGUAGE.into()),
         _ => None,
     }
 }
@@ -68,7 +69,7 @@ mod tests {
 
     #[test]
     fn returns_none_for_unsupported() {
-        let result = with_parser(Language::Python, "def main(): pass", |_| ());
+        let result = with_parser(Language::Java, "class Foo {}", |_| ());
         assert!(result.is_none());
     }
 }

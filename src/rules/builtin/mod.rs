@@ -133,6 +133,14 @@ pub fn all_rules_with(cfg: &crate::config::RulesConfig) -> Vec<Box<dyn Rule>> {
         Box::new(rust_rules::RustAvoidTodo),
         Box::new(rust_rules::RustAvoidUnimplemented),
         Box::new(rust_rules::RustExplicitTypes),
+        Box::new(python_rules::PythonAvoidPrint),
+        Box::new(python_rules::PythonAvoidBareExcept),
+        Box::new(python_rules::PythonAvoidMutableDefault),
+        Box::new(python_rules::PythonAvoidGlobalVar),
+        Box::new(python_rules::PythonAvoidTodo),
+        Box::new(python_rules::PythonAvoidStarImport),
+        Box::new(python_rules::PythonExplicitReturnType),
+        Box::new(python_rules::PythonDocstringRequired),
         Box::new(no_new_func::NoNewFunc),
         Box::new(no_implied_eval::NoImpliedEval),
         Box::new(no_script_url::NoScriptUrl),
@@ -245,5 +253,6 @@ pub fn all_rules_with(cfg: &crate::config::RulesConfig) -> Vec<Box<dyn Rule>> {
 }
 pub mod dart_rules;
 pub mod go_rules;
+pub mod python_rules;
 pub mod rust_rules;
 pub mod security_taint;

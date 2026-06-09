@@ -282,6 +282,46 @@ pub fn compute(tree: &Tree, source: &str, lang: Language) -> FileMetrics {
             "trait_item" if lang == Language::Rust => m.interface_count += 1,
             "type_item" if lang == Language::Rust => m.type_alias_count += 1,
             // --- End Rust ---
+
+            // --- Python AST nodes ---
+            // Python uses: function_definition, class_definition
+            // decorator, lambda
+            "function_definition" if lang == Language::Python => {
+                let name = extract_python_func_name(&node, source);
+                let params = count_python_params(&node, source);
+                let start = node.start_position().row as u32 + 1;
+                let end = node.end_position().row as u32 + 1;
+                let complexity = cyclomatic_complexity(&node, source);
+                functions.push(FunctionInfo {
+                    name,
+                    start_line: start,
+                    end_line: end,
+                    complexity,
+                    parameter_count: params,
+                });
+                m.function_count += 1;
+                total_complexity += complexity;
+            }
+            "class_definition" if lang == Language::Python => m.class_count += 1,
+            "decorated_definition" if lang == Language::Python => {
+                // Count decorated definitions (e.g. @property, @staticmethod)
+            }
+            "lambda" if lang == Language::Python => {
+                let params = count_python_lambda_params(&node, source);
+                let start = node.start_position().row as u32 + 1;
+                let end = node.end_position().row as u32 + 1;
+                let complexity = cyclomatic_complexity(&node, source);
+                functions.push(FunctionInfo {
+                    name: "<lambda>".to_string(),
+                    start_line: start,
+                    end_line: end,
+                    complexity,
+                    parameter_count: params,
+                });
+                m.function_count += 1;
+                total_complexity += complexity;
+            }
+            // --- End Python ---
             _ => {}
         }
     });
@@ -293,11 +333,21 @@ pub fn compute(tree: &Tree, source: &str, lang: Language) -> FileMetrics {
 
 fn count_lines(source: &str, m: &mut FileMetrics) {
     let mut in_block_comment = false;
+    // Track if we're inside a Python multi-line string (triple-quoted)
+    // to avoid counting docstrings as comment lines
+    let mut in_triple_string = false;
+    let mut triple_char = 0u8;
+
     for raw_line in source.lines() {
         m.loc += 1;
         let trimmed = raw_line.trim();
         if trimmed.is_empty() {
             m.blank_lines += 1;
+            continue;
+        }
+        // Python-style line comment: # ...
+        if trimmed.starts_with('#') && !in_block_comment && !in_triple_string {
+            m.comment_lines += 1;
             continue;
         }
         // Naive: does this line contain a `//` (not inside a string) or are
@@ -555,6 +605,66 @@ fn count_rust_closure_params(node: &Node, source: &str) -> u32 {
 
 // ── End Rust helpers ──────────────────────────────────────────────
 
+// ── Python helper functions ────────────────────────────────────────
+
+fn extract_python_func_name(node: &Node, source: &str) -> String {
+    // function_definition has a direct "name" field
+    if let Some(name_node) = node.child_by_field_name("name") {
+        if let Ok(name) = name_node.utf8_text(source.as_bytes()) {
+            return name.to_string();
+        }
+    }
+    "<anonymous>".to_string()
+}
+
+fn count_python_params(node: &Node, source: &str) -> u32 {
+    // function_definition has a "parameters" field containing parameters
+    if let Some(params) = node.child_by_field_name("parameters") {
+        let mut count = 0u32;
+        let mut cursor = params.walk();
+        for child in params.children(&mut cursor) {
+            match child.kind() {
+                "identifier"
+                | "typed_parameter"
+                | "default_parameter"
+                | "typed_default_parameter"
+                | "list_splat_pattern"
+                | "dictionary_splat_pattern"
+                | "keyword_separator" => count += 1,
+                _ => {}
+            }
+        }
+        return count;
+    }
+    0
+}
+
+fn count_python_lambda_params(node: &Node, source: &str) -> u32 {
+    // lambda: parameters → child 0 is the parameter list
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        if child.kind() == "lambda_parameters" {
+            let mut count = 0u32;
+            let mut inner = child.walk();
+            for param in child.children(&mut inner) {
+                match param.kind() {
+                    "identifier"
+                    | "typed_parameter"
+                    | "default_parameter"
+                    | "typed_default_parameter"
+                    | "list_splat_pattern"
+                    | "dictionary_splat_pattern" => count += 1,
+                    _ => {}
+                }
+            }
+            return count;
+        }
+    }
+    0
+}
+
+// ── End Python helpers ────────────────────────────────────────────
+
 fn arrow_function_name(node: &Node, source: &str) -> Option<String> {
     let parent = node.parent()?;
     if parent.kind() == "variable_declarator" {
@@ -580,6 +690,16 @@ pub fn cyclomatic_complexity(node: &Node, source: &str) -> u32 {
         "if_statement" | "case_statement" | "catch_clause" | "ternary_expression" => count += 1,
         "for_statement" | "for_in_statement" | "for_of_statement" | "while_statement"
         | "do_statement" => count += 1,
+        // Python-specific branching
+        "elif_clause" | "except_clause" => count += 1,
+        "if" if matches!(n.parent(), Some(p) if p.kind() == "conditional_expression") => count += 1,
+        "for" if matches!(n.parent(), Some(p) if p.kind() == "list_comprehension" || p.kind() == "set_comprehension" || p.kind() == "dict_comprehension" || p.kind() == "generator_expression") => {
+            count += 1
+        }
+        // Python list comprehension with if
+        "if_clause" => count += 1,
+        // Python boolean operators
+        "boolean_operator" => count += 1,
         "binary_expression" => {
             if let Some(op) = n.child_by_field_name("operator") {
                 if let Ok(t) = op.utf8_text(source.as_bytes()) {
