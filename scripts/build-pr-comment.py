@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""Build Lens PR comment from scan + dep JSON results."""
+import json
+import sys
+
+def main():
+    # Read scan results
+    try:
+        with open("/tmp/lens-results.json") as f:
+            d = json.load(f)
+    except Exception:
+        print("<!-- lens-ci-comment -->\n## \U0001F50D Lens Scan\n\n\u26A0\uFE0F No scan results available.")
+        return
+
+    lines = ["<!-- lens-ci-comment -->", "## \U0001F50D Lens Code Quality Report", ""]
+
+    summary = d.get("summary", {})
+    metrics = d.get("metrics", {})
+    issues = d.get("issues", [])
+    ratings = d.get("quality_ratings", {})
+    dup = d.get("duplication", {})
+    cov = d.get("coverage", {})
+    total_files = summary.get("total_files", 0)
+    duration = d.get("scan", {}).get("duration_ms", 0)
+
+    # Metrics table
+    lines.append("| Metric | Value |")
+    lines.append("|--------|-------|")
+    lines.append(f"| Files | {total_files} |")
+    lines.append(f"| Duration | {duration}ms |")
+    if metrics:
+        lines.append(f"| LOC | {metrics.get('total_loc', '-')} |")
+        lines.append(f"| Functions | {metrics.get('total_functions', '-')} |")
+        lines.append(f"| Complexity | {metrics.get('total_cyclomatic_complexity', '-')} |")
+    if dup:
+        pct = dup.get("duplication_percent", 0)
+        emoji = "\U0001F7E2" if pct < 3 else "\U0001F7E1" if pct < 5 else "\U0001F534"
+        lines.append(f"| Duplication | {emoji} {pct:.2f}% |")
+    if cov:
+        pct = cov.get("coverage_percent", 0)
+        emoji = "\U0001F7E2" if pct >= 80 else "\U0001F7E1" if pct >= 50 else "\U0001F534"
+        lines.append(f"| Coverage | {emoji} {pct:.2f}% |")
+    lines.append("")
+
+    # Ratings
+    if ratings:
+        lines.append("| Category | Rating |")
+        lines.append("|----------|--------|")
+        rating_emojis = {"A": "\U0001F7E2", "B": "\U0001F7E1", "C": "\U0001F7E0", "D": "\U0001F534", "E": "\U0001F534"}
+        for cat, r in ratings.items():
+            emoji = rating_emojis.get(r, "\u26AA")
+            lines.append(f"| {cat.title()} | {emoji} {r} |")
+        lines.append("")
+
+    # Issues
+    sev_counts = {}
+    for i in issues:
+        s = i.get("severity", "info")
+        sev_counts[s] = sev_counts.get(s, 0) + 1
+
+    blocker = sev_counts.get("blocker", 0)
+    critical = sev_counts.get("critical", 0)
+    major = sev_counts.get("major", 0)
+    minor = sev_counts.get("minor", 0)
+    info = sev_counts.get("info", 0)
+
+    lines.append(f"### Issues: {len(issues)} total")
+    if blocker > 0:
+        lines.append(f"- \U0001F534 Blocker: **{blocker}**")
+    if critical > 0:
+        lines.append(f"- \U0001F7E0 Critical: **{critical}**")
+    if major > 0:
+        lines.append(f"- \U0001F7E1 Major: **{major}**")
+    if minor > 0:
+        lines.append(f"- \U0001F535 Minor: **{minor}**")
+    if info > 0:
+        lines.append(f"- \u26AA Info: {info}")
+    if not issues:
+        lines.append("\u2705 No issues found!")
+    lines.append("")
+
+    if issues:
+        lines.append("<details><summary>\U0001F4CB Top issues</summary>")
+        lines.append("")
+        lines.append("| Severity | File | Line | Rule | Message |")
+        lines.append("|----------|------|------|------|---------|")
+        for i in issues[:15]:
+            fpath = i.get("file", "?")
+            fname = fpath.split("/")[-1]
+            line = i.get("start_line", "?")
+            rule = i.get("rule_id", "?")
+            msg = i.get("message", "")[:60]
+            sev = i.get("severity", "info")
+            lines.append(f"| {sev} | `{fname}` | L{line} | `{rule}` | {msg} |")
+        lines.append("")
+        lines.append("</details>")
+        lines.append("")
+
+    # Dependencies
+    try:
+        with open("/tmp/lens-deps.json") as f:
+            dep_data = json.load(f)
+        vulns = dep_data.get("vulnerabilities", [])
+        total = dep_data.get("total_scanned", 0)
+        lines.append(f"### \U0001F6E1\uFE0F Dependencies: {total} scanned, {len(vulns)} vulnerable")
+        if vulns:
+            lines.append("")
+            lines.append("| Severity | Package | Version | ID |")
+            lines.append("|----------|---------|---------|-----|")
+            for v in vulns[:10]:
+                sev = v.get("severity", "info")
+                pkg = v.get("package", "?")
+                ver = v.get("version", "?")
+                oid = v.get("osv_id", "?")
+                url = v.get("url", "")
+                lines.append(f"| {sev} | `{pkg}` | {ver} | [{oid}]({url}) |")
+            lines.append("")
+        else:
+            lines.append("")
+            lines.append("\u2705 No known vulnerabilities")
+            lines.append("")
+    except Exception:
+        pass
+
+    # Footer
+    version = "lens"
+    try:
+        import subprocess
+        version = subprocess.check_output(["lens", "--version"], stderr=subprocess.DEVNULL).decode().strip()
+    except Exception:
+        pass
+    lines.append("---")
+    lines.append(f"<sup>Generated by {version} \u2022 [Docs](https://docs.lenscan.dev) \u2022 [GitHub](https://github.com/fatmuh/lens)</sup>")
+
+    print("\n".join(lines))
+
+if __name__ == "__main__":
+    main()

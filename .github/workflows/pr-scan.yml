@@ -1,0 +1,116 @@
+name: Lens PR Scan
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+
+jobs:
+  scan:
+    name: Lens PR Bot
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Lens
+        shell: bash
+        run: |
+          if command -v lens &> /dev/null; then
+            echo "Lens already installed: $(lens --version)"
+            exit 0
+          fi
+          echo "Installing Lens..."
+          # Get latest version
+          LATEST=$(curl -sL -H 'Accept: application/vnd.github+json' https://api.github.com/repos/fatmuh/lens/releases/latest 2>/dev/null | grep '"tag_name"' | head -1 | sed 's/.*"v\([0-9.]*\)".*/\1/')
+          if [ -z "$LATEST" ]; then
+            echo "Could not determine latest version, falling back to v0.9.0"
+            LATEST="0.9.0"
+          fi
+          echo "  Installing v${LATEST}..."
+          curl -sL "https://github.com/fatmuh/lens/releases/download/v${LATEST}/lens-x86_64-unknown-linux-musl.tar.gz" -o /tmp/lens.tar.gz
+          tar xzf /tmp/lens.tar.gz -C /usr/local/bin
+          chmod +x /usr/local/bin/lens
+          lens --version
+
+      - name: Run Lens scan
+        id: scan
+        shell: bash
+        run: |
+          set +e
+          lens scan . --format json --quiet > /tmp/lens-results.json 2>/dev/null
+          echo "exit=$?" >> $GITHUB_OUTPUT
+          set -e
+
+      - name: Run dependency check
+        if: always()
+        shell: bash
+        continue-on-error: true
+        run: |
+          lens dep . --format json --quiet > /tmp/lens-deps.json 2>/dev/null || true
+
+      - name: Build PR comment
+        if: always()
+        shell: bash
+        run: |
+          python3 scripts/build-pr-comment.py > /tmp/lens-comment.md
+          cat /tmp/lens-comment.md
+
+      - name: Post PR comment
+        if: always() && github.event.pull_request.number != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('/tmp/lens-comment.md', 'utf8');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const marker = '<!-- lens-ci-comment -->';
+            const existing = comments.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body,
+              });
+            }
+
+      - name: Upload SARIF
+        if: always()
+        shell: bash
+        run: |
+          lens scan . --format sarif --quiet > lens-results.sarif 2>/dev/null || true
+
+      - name: Upload to Code Scanning
+        if: always() && hashFiles('lens-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true
+        with:
+          sarif_file: lens-results.sarif
+          category: lens
+
+      - name: Quality gate
+        if: steps.scan.outputs.exit != '0'
+        run: |
+          echo "::warning::Lens quality gate reported issues — see PR comment"
