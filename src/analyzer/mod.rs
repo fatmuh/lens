@@ -16,6 +16,7 @@ pub mod taint;
 pub mod tokenize;
 pub mod tokenize_dart;
 pub mod tokenize_go;
+pub mod tokenize_rust;
 
 use std::path::PathBuf;
 
@@ -196,10 +197,11 @@ fn analyze_file(path: &PathBuf, config: &AnalyzeConfig) -> FileAnalysis {
     let tokens = match lang {
         Some(Language::Dart) => tokenize_dart::tokenize_dart(&content),
         Some(Language::Go) => tokenize_go::tokenize_go(&content),
+        Some(Language::Rust) => tokenize_rust::tokenize_rust(&content),
         _ => tokenize::tokenize(&content),
     };
 
-    // Metrics — TypeScript/TSX, Dart, and Go.
+    // Metrics — TypeScript/TSX, Dart, Go, and Rust.
     let metrics = match lang {
         Some(Language::TypeScript) | Some(Language::Tsx) => {
             parser::with_parser(lang.unwrap(), &content, |tree| {
@@ -211,6 +213,9 @@ fn analyze_file(path: &PathBuf, config: &AnalyzeConfig) -> FileAnalysis {
         }),
         Some(Language::Go) => parser::with_parser(Language::Go, &content, |tree| {
             metrics::compute(tree, &content, Language::Go)
+        }),
+        Some(Language::Rust) => parser::with_parser(Language::Rust, &content, |tree| {
+            metrics::compute(tree, &content, Language::Rust)
         }),
         _ => None,
     };
@@ -257,6 +262,8 @@ pub fn is_test_or_generated_file(path: &str) -> bool {
         || name.ends_with("_test.dart")
         || name.ends_with(".test.dart")
         || name.ends_with("_test.go")
+        || name.ends_with("_test.rs")
+        || name.starts_with("test_") && name.ends_with(".rs")
     {
         return true;
     }

@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-06-09
+
+### Added
+
+- **Rust language support** (fourth language after TypeScript/JS, Dart, and Go)
+  - Language detection: `.rs` files → `Rust` enum
+  - `tree-sitter-rust` 0.24 grammar for AST parsing
+  - AST metrics: functions (`fn`), closures, structs, enums, traits, type aliases, complexity
+  - Rust CPD tokenizer (`src/analyzer/tokenize_go.rs`): strips comments (including nested `/* */`), strings, raw strings (`r""`, `r#""#`), byte strings, char literals, preserves lifetimes and attributes
+  - `.rs` files included in SonarQube-compatible duplication detection
+  - Test file detection: `_test.rs`, `test_*.rs` excluded from duplication
+  - NOSONAR: `//` style comments
+  - 6 Rust-specific rules:
+    - `rust/avoid-println` (minor) — use tracing/logging
+    - `rust/avoid-unwrap` (major) — use `?` or `ok_or()`
+    - `rust/avoid-expect` (minor) — use proper error propagation
+    - `rust/avoid-todo` (major) — complete implementations
+    - `rust/avoid-unimplemented` (major) — implement functions
+    - `rust/explicit-return-type` (info) — public functions need return types
+  - 15 unit tests for Rust tokenizer
+
+### Rule count
+
+| Category | Count |
+|----------|-------|
+| TS/JS built-in | 99 |
+| Dart-specific | 6 |
+| Go-specific | 6 |
+| Rust-specific | 6 |
+| SonarJS stubs | 493 |
+| **Total** | **610** |
+
+### Dependencies
+
+- Added `tree-sitter-rust` 0.24
+
 ## [0.6.0] — 2026-06-09
 
 ### Added

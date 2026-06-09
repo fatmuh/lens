@@ -16,6 +16,7 @@ pub fn get_language(lang: SrcLanguage) -> Option<Language> {
         SrcLanguage::Tsx => Some(tree_sitter_typescript::LANGUAGE_TSX.into()),
         SrcLanguage::Dart => Some(tree_sitter_dart::LANGUAGE.into()),
         SrcLanguage::Go => Some(tree_sitter_go::LANGUAGE.into()),
+        SrcLanguage::Rust => Some(tree_sitter_rust::LANGUAGE.into()),
         _ => None,
     }
 }
@@ -67,7 +68,7 @@ mod tests {
 
     #[test]
     fn returns_none_for_unsupported() {
-        let result = with_parser(Language::Rust, "fn main() {}", |_| ());
+        let result = with_parser(Language::Python, "def main(): pass", |_| ());
         assert!(result.is_none());
     }
 }

@@ -242,6 +242,46 @@ pub fn compute(tree: &Tree, source: &str, lang: Language) -> FileMetrics {
                 m.type_alias_count += 1; // Go type declarations
             }
             // --- End Go ---
+
+            // --- Rust AST nodes ---
+            // Rust uses: function_item, impl_item, struct_item, enum_item, trait_item,
+            // type_item, closure_expression
+            "function_item" if lang == Language::Rust => {
+                let name = extract_rust_func_name(&node, source);
+                let params = count_rust_params(&node, source);
+                let start = node.start_position().row as u32 + 1;
+                let end = node.end_position().row as u32 + 1;
+                let complexity = cyclomatic_complexity(&node, source);
+                functions.push(FunctionInfo {
+                    name,
+                    start_line: start,
+                    end_line: end,
+                    complexity,
+                    parameter_count: params,
+                });
+                m.function_count += 1;
+                total_complexity += complexity;
+            }
+            "closure_expression" if lang == Language::Rust => {
+                let params = count_rust_closure_params(&node, source);
+                let start = node.start_position().row as u32 + 1;
+                let end = node.end_position().row as u32 + 1;
+                let complexity = cyclomatic_complexity(&node, source);
+                functions.push(FunctionInfo {
+                    name: "<closure>".to_string(),
+                    start_line: start,
+                    end_line: end,
+                    complexity,
+                    parameter_count: params,
+                });
+                m.function_count += 1;
+                total_complexity += complexity;
+            }
+            "struct_item" if lang == Language::Rust => m.class_count += 1,
+            "enum_item" if lang == Language::Rust => m.enum_count += 1,
+            "trait_item" if lang == Language::Rust => m.interface_count += 1,
+            "type_item" if lang == Language::Rust => m.type_alias_count += 1,
+            // --- End Rust ---
             _ => {}
         }
     });
@@ -457,6 +497,63 @@ fn count_go_params(node: &Node, source: &str) -> u32 {
 }
 
 // ── End Go helpers ────────────────────────────────────────────────
+
+// ── Rust helper functions ──────────────────────────────────────────
+
+fn extract_rust_func_name(node: &Node, source: &str) -> String {
+    // function_item has a direct "name" field (identifier)
+    if let Some(name_node) = node.child_by_field_name("name") {
+        if let Ok(name) = name_node.utf8_text(source.as_bytes()) {
+            return name.to_string();
+        }
+    }
+    "<anonymous>".to_string()
+}
+
+fn count_rust_params(node: &Node, source: &str) -> u32 {
+    // function_item has a "parameters" field containing parameters
+    if let Some(params) = node.child_by_field_name("parameters") {
+        let mut count = 0u32;
+        let mut cursor = params.walk();
+        for child in params.children(&mut cursor) {
+            match child.kind() {
+                "parameter" | "self_param" | "variadic_parameter" => count += 1,
+                // typed parameter: pattern:type
+                _ => {
+                    if child.kind().contains("parameter") {
+                        count += 1;
+                    }
+                }
+            }
+        }
+        return count;
+    }
+    0
+}
+
+fn count_rust_closure_params(node: &Node, source: &str) -> u32 {
+    // closure_expression: |a, b| { ... }
+    // The parameters are in a closure_parameters child
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        if child.kind() == "closure_parameters" {
+            let mut count = 0u32;
+            let mut inner = child.walk();
+            for param in child.children(&mut inner) {
+                if param.kind() == "parameter"
+                    || param.kind() == "identifier"
+                    || param.kind() == "_"
+                {
+                    count += 1;
+                }
+            }
+            return count;
+        }
+    }
+    0
+}
+
+// ── End Rust helpers ──────────────────────────────────────────────
 
 fn arrow_function_name(node: &Node, source: &str) -> Option<String> {
     let parent = node.parent()?;

@@ -1,0 +1,2311 @@
+{
+  "scan_time": 1780986516,
+  "files": {
+    "agent/client.rs": {
+      "hash": "43e811d2b6cabad3",
+      "issues": []
+    },
+    "agent/coverage.rs": {
+      "hash": "49194a09f3de91c6",
+      "issues": [
+        {
+          "key": "rust/avoid-println:34:d509445f73ef96a0",
+          "rule_id": "rust/avoid-println",
+          "line": 34,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:42:ec5441e12d30d351",
+          "rule_id": "rust/avoid-println",
+          "line": 42,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:63:e3132d8572b12570",
+          "rule_id": "rust/avoid-println",
+          "line": 63,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:88:1ca320f02198eb0c",
+          "rule_id": "rust/avoid-println",
+          "line": 88,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:99:ad175ae05ca53143",
+          "rule_id": "rust/avoid-println",
+          "line": 99,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        }
+      ]
+    },
+    "agent/dedup.rs": {
+      "hash": "01a8379d04c22518",
+      "issues": [
+        {
+          "key": "rust/avoid-println:38:e2b35595a61b06d2",
+          "rule_id": "rust/avoid-println",
+          "line": 38,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:47:5b3c517b816529a3",
+          "rule_id": "rust/avoid-println",
+          "line": 47,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:62:5a2dd224577667ba",
+          "rule_id": "rust/avoid-println",
+          "line": 62,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:107:99fe356eab0427c1",
+          "rule_id": "rust/avoid-println",
+          "line": 107,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:123:93fdb08f99f7afb3",
+          "rule_id": "rust/avoid-println",
+          "line": 123,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        }
+      ]
+    },
+    "agent/diff.rs": {
+      "hash": "e6358fb87bc735bb",
+      "issues": [
+        {
+          "key": "rust/avoid-println:73:3c907a7d7a93065a",
+          "rule_id": "rust/avoid-println",
+          "line": 73,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:81:fad266d3fe02a253",
+          "rule_id": "rust/avoid-println",
+          "line": 81,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:85:002c0df251090b37",
+          "rule_id": "rust/avoid-println",
+          "line": 85,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:89:3cdd2c6d957aced8",
+          "rule_id": "rust/avoid-println",
+          "line": 89,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:116:0ffdbdf28778f780",
+          "rule_id": "rust/avoid-println",
+          "line": 116,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:125:97496c907feb46be",
+          "rule_id": "rust/avoid-println",
+          "line": 125,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:129:74f3e598cb0483c6",
+          "rule_id": "rust/avoid-println",
+          "line": 129,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:133:db9681656941b30c",
+          "rule_id": "rust/avoid-println",
+          "line": 133,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:296:31cfcc3e6ef41ccc",
+          "rule_id": "rust/avoid-println",
+          "line": 296,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:300:cc3f967f15bcf71b",
+          "rule_id": "rust/avoid-println",
+          "line": 300,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:314:9b7f7dc79d50d253",
+          "rule_id": "rust/avoid-println",
+          "line": 314,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:325:e7909dfbd3c1ddef",
+          "rule_id": "rust/avoid-println",
+          "line": 325,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:334:82e2ddf468d0fdb6",
+          "rule_id": "rust/avoid-println",
+          "line": 334,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/explicit-return-type:69:52e4c056f26d5b6e",
+          "rule_id": "rust/explicit-return-type",
+          "line": 69,
+          "message": "Public function 'print_preview' should have an explicit return type"
+        }
+      ]
+    },
+    "agent/mod.rs": {
+      "hash": "a7ecb055fe4f951f",
+      "issues": []
+    },
+    "agent/test_runner.rs": {
+      "hash": "6f7ebe16fcb15f6f",
+      "issues": [
+        {
+          "key": "rust/avoid-println:188:71723a57eb4c6a28",
+          "rule_id": "rust/avoid-println",
+          "line": 188,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:189:31dec192d37ef660",
+          "rule_id": "rust/avoid-println",
+          "line": 189,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:195:1475006f4e34f299",
+          "rule_id": "rust/avoid-println",
+          "line": 195,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        }
+      ]
+    },
+    "agent/watch.rs": {
+      "hash": "b6c4a495c5454061",
+      "issues": [
+        {
+          "key": "rust/avoid-println:43:ab6d94243f3743f2",
+          "rule_id": "rust/avoid-println",
+          "line": 43,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:48:97dc928a67af5e1a",
+          "rule_id": "rust/avoid-println",
+          "line": 48,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:92:937c59fe6402a3ab",
+          "rule_id": "rust/avoid-println",
+          "line": 92,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:123:93fdb08f99f7afb3",
+          "rule_id": "rust/avoid-println",
+          "line": 123,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:126:03544ea247500053",
+          "rule_id": "rust/avoid-println",
+          "line": 126,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:133:db9681656941b30c",
+          "rule_id": "rust/avoid-println",
+          "line": 133,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:142:5d4950c0dd985731",
+          "rule_id": "rust/avoid-println",
+          "line": 142,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:145:0a1b9cf482bb2c06",
+          "rule_id": "rust/avoid-println",
+          "line": 145,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:152:ffbefc616bdb0349",
+          "rule_id": "rust/avoid-println",
+          "line": 152,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        }
+      ]
+    },
+    "analyzer/cognitive.rs": {
+      "hash": "2805b402a3aae168",
+      "issues": []
+    },
+    "analyzer/duplication.rs": {
+      "hash": "f30d41b0a0c24c7a",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:354:b59791e6bcd1a680",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 354,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:359:f0c7107ae9fc42e9",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 359,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:364:7046e8b70cc991dc",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 364,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:369:5726f36d48568e4a",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 369,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:609:65dc1f622dc3792f",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 609,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:646:ee2308c4fcc1601b",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 646,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:878:08aef9e3eee9f61d",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 878,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "analyzer/metrics.rs": {
+      "hash": "6c12c5ce336df1d1",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:672:5db2777f015d0644",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 672,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:695:255405a32ef7dea4",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 695,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "analyzer/mod.rs": {
+      "hash": "03b5b4f794a9b843",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:207:8da802528eb7f0f7",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 207,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:208:84cf8dd1f7aaddc4",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 208,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "analyzer/parser.rs": {
+      "hash": "4afcad6d0ad33b81",
+      "issues": [
+        {
+          "key": "rust/explicit-return-type:41:002cd4769bcd1526",
+          "rule_id": "rust/explicit-return-type",
+          "line": 41,
+          "message": "Public function 'visit_descendants<'a,' should have an explicit return type"
+        }
+      ]
+    },
+    "analyzer/sonar_dup.rs": {
+      "hash": "5e33e9bffabec6ac",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:484:98e7c73dc7fae3a3",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 484,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "analyzer/taint.rs": {
+      "hash": "2307ff9c530fae81",
+      "issues": []
+    },
+    "analyzer/tokenize.rs": {
+      "hash": "f6c419f059458cf6",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:23:fca4c77b9ec7e36b",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 23,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:150:ac3089d11a9fd8ab",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 150,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:152:837b1a9b076503ab",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 152,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:278:c99770f157129240",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 278,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:286:50f2f55aef715faa",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 286,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "analyzer/tokenize_dart.rs": {
+      "hash": "708380cf7bc15d02",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:15:438bdac72343fa5b",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 15,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:292:887f56fb618293cc",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 292,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:294:2d756482e1c53caa",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 294,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:487:edd4c9b50b16dcf5",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 487,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "analyzer/tokenize_go.rs": {
+      "hash": "98c890697b7db096",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:15:438bdac72343fa5b",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 15,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:154:566b2c7738486b81",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 154,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:156:969130c3ea80a441",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 156,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:371:ee42bebe968f3d04",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 371,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "analyzer/tokenize_rust.rs": {
+      "hash": "4e0430b480a63250",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:18:35a3236110f04773",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 18,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:126:e2e4a5322e894abb",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 126,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:132:e4baa7734a276d60",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 132,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:138:000db1b0d3705d2b",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 138,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:338:1c22769c2b5b9c7f",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 338,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "cli.rs": {
+      "hash": "5111dc6ee6fb8f58",
+      "issues": []
+    },
+    "config.rs": {
+      "hash": "94719d653684224d",
+      "issues": [
+        {
+          "key": "rust/avoid-println:461:1a93d2abc0369415",
+          "rule_id": "rust/avoid-println",
+          "line": 461,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:462:652d7002d442eb94",
+          "rule_id": "rust/avoid-println",
+          "line": 462,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:463:573f9af001e75178",
+          "rule_id": "rust/avoid-println",
+          "line": 463,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:464:78fd0dc008fd9059",
+          "rule_id": "rust/avoid-println",
+          "line": 464,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        }
+      ]
+    },
+    "coverage/cobertura.rs": {
+      "hash": "7ff07d6dedd3f16c",
+      "issues": [
+        {
+          "key": "rust/avoid-println:69:b00631acd02b35fd",
+          "rule_id": "rust/avoid-println",
+          "line": 69,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        }
+      ]
+    },
+    "coverage/jacoco.rs": {
+      "hash": "0fcee984f8073946",
+      "issues": [
+        {
+          "key": "rust/avoid-println:40:889e6a3093801f92",
+          "rule_id": "rust/avoid-println",
+          "line": 40,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:127:6a97f832b0f7d495",
+          "rule_id": "rust/avoid-println",
+          "line": 127,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        }
+      ]
+    },
+    "coverage/lcov.rs": {
+      "hash": "4728f4bd983fa915",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:133:96fa923b75968bee",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 133,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "coverage/mod.rs": {
+      "hash": "b6cb604c3bb281c6",
+      "issues": [
+        {
+          "key": "rust/avoid-println:280:77e1b7484dd1f789",
+          "rule_id": "rust/avoid-println",
+          "line": 280,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-unwrap:365:d84ef40c891df290",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 365,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/explicit-return-type:66:794998ff6cdd6b33",
+          "rule_id": "rust/explicit-return-type",
+          "line": 66,
+          "message": "Public function 'merge' should have an explicit return type"
+        },
+        {
+          "key": "rust/explicit-return-type:228:0be1f0969fbf8950",
+          "rule_id": "rust/explicit-return-type",
+          "line": 228,
+          "message": "Public function 'recompute_totals' should have an explicit return type"
+        }
+      ]
+    },
+    "main.rs": {
+      "hash": "30b0ffdffc372424",
+      "issues": [
+        {
+          "key": "rust/avoid-println:56:699d9c502be389a3",
+          "rule_id": "rust/avoid-println",
+          "line": 56,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:57:9a23e8c2a3d0c6fe",
+          "rule_id": "rust/avoid-println",
+          "line": 57,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:86:bd637460b82dd502",
+          "rule_id": "rust/avoid-println",
+          "line": 86,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:87:6a2598ec7d9da375",
+          "rule_id": "rust/avoid-println",
+          "line": 87,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:103:50b9eb3792087ff1",
+          "rule_id": "rust/avoid-println",
+          "line": 103,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:154:0068922078ada478",
+          "rule_id": "rust/avoid-println",
+          "line": 154,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:155:1508e9b90d784116",
+          "rule_id": "rust/avoid-println",
+          "line": 155,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:190:5b9a25d9c5cedfcb",
+          "rule_id": "rust/avoid-println",
+          "line": 190,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:197:cdb8755f2bec21f0",
+          "rule_id": "rust/avoid-println",
+          "line": 197,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:202:737fdbe65c844ad9",
+          "rule_id": "rust/avoid-println",
+          "line": 202,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:208:637801b20766e4a0",
+          "rule_id": "rust/avoid-println",
+          "line": 208,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:210:49b01347e826f883",
+          "rule_id": "rust/avoid-println",
+          "line": 210,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:217:a8f5abc436fdf3d0",
+          "rule_id": "rust/avoid-println",
+          "line": 217,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:222:5438b2e321766820",
+          "rule_id": "rust/avoid-println",
+          "line": 222,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:229:77192a0a518a3863",
+          "rule_id": "rust/avoid-println",
+          "line": 229,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:231:d1049cc81f4d5617",
+          "rule_id": "rust/avoid-println",
+          "line": 231,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:233:1ad0d09d9844474d",
+          "rule_id": "rust/avoid-println",
+          "line": 233,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:236:e4fe67de11f3e905",
+          "rule_id": "rust/avoid-println",
+          "line": 236,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:248:e92b621c9c93b974",
+          "rule_id": "rust/avoid-println",
+          "line": 248,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:272:ebbac1a83fe1c93f",
+          "rule_id": "rust/avoid-println",
+          "line": 272,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:281:2d731e23f0f14c2f",
+          "rule_id": "rust/avoid-println",
+          "line": 281,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:297:05949586e4d7b275",
+          "rule_id": "rust/avoid-println",
+          "line": 297,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:300:cc3f967f15bcf71b",
+          "rule_id": "rust/avoid-println",
+          "line": 300,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:308:27c6a16497dd3e44",
+          "rule_id": "rust/avoid-println",
+          "line": 308,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:317:362e52ea594c292e",
+          "rule_id": "rust/avoid-println",
+          "line": 317,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:324:42cf1594519c85f2",
+          "rule_id": "rust/avoid-println",
+          "line": 324,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:334:82e2ddf468d0fdb6",
+          "rule_id": "rust/avoid-println",
+          "line": 334,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:355:c4a46702a81cab63",
+          "rule_id": "rust/avoid-println",
+          "line": 355,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:373:9cb4c8212a9532e1",
+          "rule_id": "rust/avoid-println",
+          "line": 373,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:374:60ea5d5c09226924",
+          "rule_id": "rust/avoid-println",
+          "line": 374,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:388:0fb4b0df6b5b4d6f",
+          "rule_id": "rust/avoid-println",
+          "line": 388,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:396:521a934fe4013172",
+          "rule_id": "rust/avoid-println",
+          "line": 396,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:397:ebca09a0e366a77a",
+          "rule_id": "rust/avoid-println",
+          "line": 397,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-unwrap:371:ee42bebe968f3d04",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 371,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "rating.rs": {
+      "hash": "ea8f7f8563ca5914",
+      "issues": []
+    },
+    "report/json.rs": {
+      "hash": "7b8105846ab504b3",
+      "issues": []
+    },
+    "report/mod.rs": {
+      "hash": "6e1e6ed80a495f32",
+      "issues": []
+    },
+    "report/terminal.rs": {
+      "hash": "796fe43fa4ba91c2",
+      "issues": []
+    },
+    "rules/builtin/camelcase.rs": {
+      "hash": "fc512bab0f00c129",
+      "issues": []
+    },
+    "rules/builtin/consistent_type_imports.rs": {
+      "hash": "d1ab356a7c6ec2e1",
+      "issues": []
+    },
+    "rules/builtin/curly.rs": {
+      "hash": "5fac42eab14c9ea1",
+      "issues": []
+    },
+    "rules/builtin/dart_rules.rs": {
+      "hash": "cd172722b6a4ac43",
+      "issues": []
+    },
+    "rules/builtin/default_case.rs": {
+      "hash": "50ecc4ade833aeb1",
+      "issues": []
+    },
+    "rules/builtin/go_rules.rs": {
+      "hash": "4f00fa7b0dd7a0f0",
+      "issues": []
+    },
+    "rules/builtin/max_function_complexity.rs": {
+      "hash": "5aa072b54ac81a7a",
+      "issues": []
+    },
+    "rules/builtin/max_function_lines.rs": {
+      "hash": "ce1ffb4319d7a6aa",
+      "issues": []
+    },
+    "rules/builtin/max_params.rs": {
+      "hash": "3a608000cf3e52f0",
+      "issues": []
+    },
+    "rules/builtin/mod.rs": {
+      "hash": "050fd1d7fb49a859",
+      "issues": []
+    },
+    "rules/builtin/no_array_constructor.rs": {
+      "hash": "127c9872659f61cc",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:37:b4ce762d9e863f72",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 37,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "rules/builtin/no_async_promise_executor.rs": {
+      "hash": "1f0e4c815de14148",
+      "issues": []
+    },
+    "rules/builtin/no_await_in_loop.rs": {
+      "hash": "12859a519194650a",
+      "issues": []
+    },
+    "rules/builtin/no_bitwise.rs": {
+      "hash": "ac3c0b0861283382",
+      "issues": []
+    },
+    "rules/builtin/no_buffer_constructor.rs": {
+      "hash": "5b1b616be96f59b5",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:37:b4ce762d9e863f72",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 37,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "rules/builtin/no_class_assign.rs": {
+      "hash": "8c34a9627659aec6",
+      "issues": []
+    },
+    "rules/builtin/no_compare_neg_zero.rs": {
+      "hash": "1ef12471f59b25bb",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:37:b4ce762d9e863f72",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 37,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "rules/builtin/no_console.rs": {
+      "hash": "91621151433a9015",
+      "issues": []
+    },
+    "rules/builtin/no_constant_condition.rs": {
+      "hash": "97967a70338bad24",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:38:5d234f9d0a8854fc",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 38,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "rules/builtin/no_control_regex.rs": {
+      "hash": "92597b54be13a2f2",
+      "issues": []
+    },
+    "rules/builtin/no_delete_var.rs": {
+      "hash": "96388d2b04e0aea7",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:37:b4ce762d9e863f72",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 37,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "rules/builtin/no_div_regex.rs": {
+      "hash": "c60674b663d8c591",
+      "issues": []
+    },
+    "rules/builtin/no_dupe_args.rs": {
+      "hash": "0c6d3e8bf8584e02",
+      "issues": []
+    },
+    "rules/builtin/no_dupe_class_members.rs": {
+      "hash": "b4af754e6311dcaa",
+      "issues": []
+    },
+    "rules/builtin/no_dupe_keys.rs": {
+      "hash": "fa440545f7808173",
+      "issues": []
+    },
+    "rules/builtin/no_duplicate_case.rs": {
+      "hash": "4fa9da0d0681a064",
+      "issues": []
+    },
+    "rules/builtin/no_duplicate_imports.rs": {
+      "hash": "664a5806bcb792d9",
+      "issues": []
+    },
+    "rules/builtin/no_else_return.rs": {
+      "hash": "e959b3d0c59d221a",
+      "issues": []
+    },
+    "rules/builtin/no_empty_function.rs": {
+      "hash": "9016d9a537c86948",
+      "issues": []
+    },
+    "rules/builtin/no_empty_interface.rs": {
+      "hash": "66793dcea33169cd",
+      "issues": []
+    },
+    "rules/builtin/no_empty_pattern.rs": {
+      "hash": "b384ad6c6b75275b",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:38:5d234f9d0a8854fc",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 38,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "rules/builtin/no_eqeqeq.rs": {
+      "hash": "dfd1308e49242b72",
+      "issues": []
+    },
+    "rules/builtin/no_eval.rs": {
+      "hash": "2e57d7977caeb107",
+      "issues": []
+    },
+    "rules/builtin/no_ex_assign.rs": {
+      "hash": "59a98099bd89080a",
+      "issues": []
+    },
+    "rules/builtin/no_explicit_any.rs": {
+      "hash": "eb03f06847b67ce5",
+      "issues": []
+    },
+    "rules/builtin/no_extra_bind.rs": {
+      "hash": "e845fbd338828672",
+      "issues": []
+    },
+    "rules/builtin/no_extra_boolean_cast.rs": {
+      "hash": "ffcb876473172262",
+      "issues": []
+    },
+    "rules/builtin/no_fallthrough.rs": {
+      "hash": "2a918986a6d95ba2",
+      "issues": []
+    },
+    "rules/builtin/no_func_assign.rs": {
+      "hash": "e7981d9b003d3762",
+      "issues": []
+    },
+    "rules/builtin/no_html_link.rs": {
+      "hash": "03ec32c2ac4e2892",
+      "issues": []
+    },
+    "rules/builtin/no_implicit_any.rs": {
+      "hash": "870b7488d7c96645",
+      "issues": []
+    },
+    "rules/builtin/no_implicit_globals.rs": {
+      "hash": "3956db847b2265fb",
+      "issues": []
+    },
+    "rules/builtin/no_implied_eval.rs": {
+      "hash": "507c06054d57c993",
+      "issues": []
+    },
+    "rules/builtin/no_import_assign.rs": {
+      "hash": "fe693b7ab91e69b6",
+      "issues": []
+    },
+    "rules/builtin/no_inner_declaration.rs": {
+      "hash": "236e35755cb4d91d",
+      "issues": []
+    },
+    "rules/builtin/no_label_var.rs": {
+      "hash": "929f0cf9f0a5cbc1",
+      "issues": []
+    },
+    "rules/builtin/no_lonely_if.rs": {
+      "hash": "129ed981b3d9570a",
+      "issues": []
+    },
+    "rules/builtin/no_magic_numbers.rs": {
+      "hash": "b46a55e736093c04",
+      "issues": []
+    },
+    "rules/builtin/no_misused_new.rs": {
+      "hash": "47d6a17e5e5a766a",
+      "issues": []
+    },
+    "rules/builtin/no_mixed_operators.rs": {
+      "hash": "0b0d155d9c61526e",
+      "issues": []
+    },
+    "rules/builtin/no_multi_str.rs": {
+      "hash": "ffdb7682e5962364",
+      "issues": []
+    },
+    "rules/builtin/no_negated_condition.rs": {
+      "hash": "7bb17ec6b364a73e",
+      "issues": []
+    },
+    "rules/builtin/no_nested_ternary.rs": {
+      "hash": "ffd29f903a02d3f9",
+      "issues": []
+    },
+    "rules/builtin/no_new.rs": {
+      "hash": "652880cbceb9ef4a",
+      "issues": []
+    },
+    "rules/builtin/no_new_buffer.rs": {
+      "hash": "bd089d347543f7e3",
+      "issues": []
+    },
+    "rules/builtin/no_new_func.rs": {
+      "hash": "c4054ffdeafd18e3",
+      "issues": []
+    },
+    "rules/builtin/no_new_require.rs": {
+      "hash": "1a1adc30564ce347",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:37:b4ce762d9e863f72",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 37,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "rules/builtin/no_new_symbol.rs": {
+      "hash": "3a21fcbe2f8295f5",
+      "issues": []
+    },
+    "rules/builtin/no_non_null_assertion.rs": {
+      "hash": "3f1a9990f98e3537",
+      "issues": []
+    },
+    "rules/builtin/no_obj_calls.rs": {
+      "hash": "519bee403ae0f496",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:38:5d234f9d0a8854fc",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 38,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "rules/builtin/no_octal.rs": {
+      "hash": "52903972428be29a",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:37:b4ce762d9e863f72",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 37,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "rules/builtin/no_octal_escape.rs": {
+      "hash": "e76a00b475d08948",
+      "issues": []
+    },
+    "rules/builtin/no_param_reassign.rs": {
+      "hash": "1f0f273a2590e059",
+      "issues": []
+    },
+    "rules/builtin/no_path_concat.rs": {
+      "hash": "3d2fdcedd978d4e2",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:37:b4ce762d9e863f72",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 37,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "rules/builtin/no_promise_all_in_loop.rs": {
+      "hash": "26acc958a29cc190",
+      "issues": []
+    },
+    "rules/builtin/no_proto.rs": {
+      "hash": "7f8d5635f969119e",
+      "issues": []
+    },
+    "rules/builtin/no_prototype_builtins.rs": {
+      "hash": "59a871eb711f4d51",
+      "issues": []
+    },
+    "rules/builtin/no_redeclare.rs": {
+      "hash": "1df2dd0a5ea71f71",
+      "issues": []
+    },
+    "rules/builtin/no_regex_spaces.rs": {
+      "hash": "fb69c9c449e57ef1",
+      "issues": []
+    },
+    "rules/builtin/no_return_await.rs": {
+      "hash": "5fadc54eb4a3f3ec",
+      "issues": []
+    },
+    "rules/builtin/no_script_url.rs": {
+      "hash": "2cbd867f3d7cdf43",
+      "issues": []
+    },
+    "rules/builtin/no_self_assign.rs": {
+      "hash": "d910acf9df014f9f",
+      "issues": []
+    },
+    "rules/builtin/no_self_compare.rs": {
+      "hash": "cdfac7415507de47",
+      "issues": []
+    },
+    "rules/builtin/no_sparse_arrays.rs": {
+      "hash": "536ceaaf46c57418",
+      "issues": []
+    },
+    "rules/builtin/no_template_curly_in_string.rs": {
+      "hash": "03ff12fd840b9605",
+      "issues": []
+    },
+    "rules/builtin/no_throw_literal.rs": {
+      "hash": "eaff625acc7f8331",
+      "issues": []
+    },
+    "rules/builtin/no_underscore_dangle.rs": {
+      "hash": "bd98ad8a5a57215c",
+      "issues": []
+    },
+    "rules/builtin/no_unneeded_ternary.rs": {
+      "hash": "0c7b084dc4d7ae68",
+      "issues": []
+    },
+    "rules/builtin/no_unreachable.rs": {
+      "hash": "328026b681994a84",
+      "issues": []
+    },
+    "rules/builtin/no_unsafe_finally.rs": {
+      "hash": "ce87795bf12b8a3a",
+      "issues": []
+    },
+    "rules/builtin/no_unsafe_negation.rs": {
+      "hash": "1e01db178f5caacb",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:37:b4ce762d9e863f72",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 37,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "rules/builtin/no_unused_vars.rs": {
+      "hash": "e65e8dcb32ef1238",
+      "issues": []
+    },
+    "rules/builtin/no_useless_concat.rs": {
+      "hash": "f1e26126a60bde0e",
+      "issues": []
+    },
+    "rules/builtin/no_useless_escape.rs": {
+      "hash": "5e53ae77e762a61e",
+      "issues": []
+    },
+    "rules/builtin/no_useless_rename.rs": {
+      "hash": "6779b1c43d2f6088",
+      "issues": []
+    },
+    "rules/builtin/no_useless_return.rs": {
+      "hash": "48ce92f72bd82026",
+      "issues": []
+    },
+    "rules/builtin/no_var.rs": {
+      "hash": "4a684132e0aa2281",
+      "issues": []
+    },
+    "rules/builtin/no_void.rs": {
+      "hash": "1ac3e87c83c502c2",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:37:b4ce762d9e863f72",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 37,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "rules/builtin/no_warning_comments.rs": {
+      "hash": "55da32361540e828",
+      "issues": []
+    },
+    "rules/builtin/no_with.rs": {
+      "hash": "6ae1b4ad53bf936e",
+      "issues": []
+    },
+    "rules/builtin/one_var.rs": {
+      "hash": "f6e13fc5e0c71741",
+      "issues": []
+    },
+    "rules/builtin/operator_assignment.rs": {
+      "hash": "e006a2de34a20f55",
+      "issues": []
+    },
+    "rules/builtin/prefer_arrow_callback.rs": {
+      "hash": "49f996cb2621234e",
+      "issues": []
+    },
+    "rules/builtin/prefer_const.rs": {
+      "hash": "2704043bb48b1978",
+      "issues": []
+    },
+    "rules/builtin/prefer_nullish_coalescing.rs": {
+      "hash": "c9d2f9cb37bbaaaa",
+      "issues": []
+    },
+    "rules/builtin/prefer_optional_chain.rs": {
+      "hash": "d4870186403a7b44",
+      "issues": []
+    },
+    "rules/builtin/prefer_promise_reject_errors.rs": {
+      "hash": "de8dd692652599d6",
+      "issues": []
+    },
+    "rules/builtin/prefer_spread.rs": {
+      "hash": "c3d051d6f11469a5",
+      "issues": []
+    },
+    "rules/builtin/prefer_template.rs": {
+      "hash": "0dac902c5790920e",
+      "issues": []
+    },
+    "rules/builtin/quote_props.rs": {
+      "hash": "201e08be07eb50f8",
+      "issues": []
+    },
+    "rules/builtin/require_await.rs": {
+      "hash": "52af6e9661a6db92",
+      "issues": []
+    },
+    "rules/builtin/rust_rules.rs": {
+      "hash": "b06fddbb129811ea",
+      "issues": [
+        {
+          "key": "rust/avoid-println:48:97dc928a67af5e1a",
+          "rule_id": "rust/avoid-println",
+          "line": 48,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:49:4e910aadee982547",
+          "rule_id": "rust/avoid-println",
+          "line": 49,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:50:60d51bd78c8eb179",
+          "rule_id": "rust/avoid-println",
+          "line": 50,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-unwrap:79:d9054545443d6c43",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 79,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:102:c7d59b87c69c17bf",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 102,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:113:65c9f3cc0e1e6838",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 113,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-expect:138:5ccb49ff7e14049b",
+          "rule_id": "rust/avoid-expect",
+          "line": 138,
+          "message": "Use `?` or `.map_err()` for error propagation instead of .expect()"
+        },
+        {
+          "key": "rust/avoid-expect:160:f14b6c050d1c088a",
+          "rule_id": "rust/avoid-expect",
+          "line": 160,
+          "message": "Use `?` or `.map_err()` for error propagation instead of .expect()"
+        },
+        {
+          "key": "rust/avoid-expect:164:5575e676321af01e",
+          "rule_id": "rust/avoid-expect",
+          "line": 164,
+          "message": "Use `?` or `.map_err()` for error propagation instead of .expect()"
+        },
+        {
+          "key": "rust/avoid-todo:186:bcdf6d20bfecc847",
+          "rule_id": "rust/avoid-todo",
+          "line": 186,
+          "message": "Complete this implementation — todo!() will panic at runtime"
+        },
+        {
+          "key": "rust/avoid-todo:189:40e09ec5aa4834b1",
+          "rule_id": "rust/avoid-todo",
+          "line": 189,
+          "message": "Complete this implementation — todo!() will panic at runtime"
+        },
+        {
+          "key": "rust/avoid-todo:204:d6bc6c5a9b03d150",
+          "rule_id": "rust/avoid-todo",
+          "line": 204,
+          "message": "Complete this implementation — todo!() will panic at runtime"
+        },
+        {
+          "key": "rust/avoid-todo:208:59a0f837260bf81d",
+          "rule_id": "rust/avoid-todo",
+          "line": 208,
+          "message": "Complete this implementation — todo!() will panic at runtime"
+        },
+        {
+          "key": "rust/avoid-unimplemented:230:ad1c125618f54e7a",
+          "rule_id": "rust/avoid-unimplemented",
+          "line": 230,
+          "message": "unimplemented!() will panic at runtime. Implement this function."
+        },
+        {
+          "key": "rust/avoid-unimplemented:233:84212223ef249fba",
+          "rule_id": "rust/avoid-unimplemented",
+          "line": 233,
+          "message": "unimplemented!() will panic at runtime. Implement this function."
+        },
+        {
+          "key": "rust/avoid-unimplemented:248:f57a44392d71d8fb",
+          "rule_id": "rust/avoid-unimplemented",
+          "line": 248,
+          "message": "unimplemented!() will panic at runtime. Implement this function."
+        },
+        {
+          "key": "rust/avoid-unimplemented:252:8b2e3464fcc7bdcb",
+          "rule_id": "rust/avoid-unimplemented",
+          "line": 252,
+          "message": "unimplemented!() will panic at runtime. Implement this function."
+        }
+      ]
+    },
+    "rules/builtin/security_taint.rs": {
+      "hash": "86288a00aa047718",
+      "issues": []
+    },
+    "rules/custom.rs": {
+      "hash": "7879536e8481da6c",
+      "issues": [
+        {
+          "key": "rust/avoid-println:63:e3132d8572b12570",
+          "rule_id": "rust/avoid-println",
+          "line": 63,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:72:d7f2ccb9a76c1382",
+          "rule_id": "rust/avoid-println",
+          "line": 72,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:80:dbd4381800951c39",
+          "rule_id": "rust/avoid-println",
+          "line": 80,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-unwrap:124:7a4002567856a849",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 124,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:166:2ffed80f70a32796",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 166,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "rules/mod.rs": {
+      "hash": "f5237f050b766e00",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:238:febb8fb73e32a1f6",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 238,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "rules/rule_tests.rs": {
+      "hash": "d0f03d9d3044e7ec",
+      "issues": []
+    },
+    "rules/sonar_compat.rs": {
+      "hash": "96f4f77abf42cc41",
+      "issues": []
+    },
+    "scanner/discovery.rs": {
+      "hash": "a31bbbddbb9975b4",
+      "issues": []
+    },
+    "scanner/language.rs": {
+      "hash": "ebfea21cfe1513fb",
+      "issues": []
+    },
+    "scanner/mod.rs": {
+      "hash": "bb07011f9be5904a",
+      "issues": [
+        {
+          "key": "rust/avoid-println:86:bd637460b82dd502",
+          "rule_id": "rust/avoid-println",
+          "line": 86,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:205:1a26da5484f931d5",
+          "rule_id": "rust/avoid-println",
+          "line": 205,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:289:70735f36ae0fbeaf",
+          "rule_id": "rust/avoid-println",
+          "line": 289,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:472:3ddcb810c9977f6e",
+          "rule_id": "rust/avoid-println",
+          "line": 472,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:634:c31fb806b524e19e",
+          "rule_id": "rust/avoid-println",
+          "line": 634,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:648:6aca7f972292a30c",
+          "rule_id": "rust/avoid-println",
+          "line": 648,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:766:c3568a59e4163522",
+          "rule_id": "rust/avoid-println",
+          "line": 766,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:767:2c407d004475c598",
+          "rule_id": "rust/avoid-println",
+          "line": 767,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:768:223bf8d236082f81",
+          "rule_id": "rust/avoid-println",
+          "line": 768,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:769:673053cb9e5600e5",
+          "rule_id": "rust/avoid-println",
+          "line": 769,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:770:2c411f8731e757f3",
+          "rule_id": "rust/avoid-println",
+          "line": 770,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:771:f63a5a668f64a509",
+          "rule_id": "rust/avoid-println",
+          "line": 771,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:772:e91c07ce48243828",
+          "rule_id": "rust/avoid-println",
+          "line": 772,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:773:85be8271f481a73a",
+          "rule_id": "rust/avoid-println",
+          "line": 773,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:780:19ca7f0f0832a099",
+          "rule_id": "rust/avoid-println",
+          "line": 780,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:781:061ec5cfbffef998",
+          "rule_id": "rust/avoid-println",
+          "line": 781,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:782:4c2f28585e37f554",
+          "rule_id": "rust/avoid-println",
+          "line": 782,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:796:810c459f9eb98690",
+          "rule_id": "rust/avoid-println",
+          "line": 796,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:807:8051b95a534b501c",
+          "rule_id": "rust/avoid-println",
+          "line": 807,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:810:1c59c07ad42d10cd",
+          "rule_id": "rust/avoid-println",
+          "line": 810,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:811:0966d71e94736796",
+          "rule_id": "rust/avoid-println",
+          "line": 811,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:812:b842c0a5a0fef063",
+          "rule_id": "rust/avoid-println",
+          "line": 812,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:837:a8286dae88309f36",
+          "rule_id": "rust/avoid-println",
+          "line": 837,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:838:8bec4ba8dbb2d25e",
+          "rule_id": "rust/avoid-println",
+          "line": 838,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:839:bf6466d43d480c93",
+          "rule_id": "rust/avoid-println",
+          "line": 839,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:840:544565318f673957",
+          "rule_id": "rust/avoid-println",
+          "line": 840,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:842:d01d102b04ef530d",
+          "rule_id": "rust/avoid-println",
+          "line": 842,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:844:4ecf59ab5dd881d4",
+          "rule_id": "rust/avoid-println",
+          "line": 844,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:846:53969ed1a3e7e956",
+          "rule_id": "rust/avoid-println",
+          "line": 846,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:847:3d845c21b1fea9a1",
+          "rule_id": "rust/avoid-println",
+          "line": 847,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:848:b9b9f031bf99ee19",
+          "rule_id": "rust/avoid-println",
+          "line": 848,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:856:7dd74641eac7d3d5",
+          "rule_id": "rust/avoid-println",
+          "line": 856,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:874:54c842952d2ca926",
+          "rule_id": "rust/avoid-println",
+          "line": 874,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:875:3550755a5a7f6419",
+          "rule_id": "rust/avoid-println",
+          "line": 875,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:880:2437277fbf629ff7",
+          "rule_id": "rust/avoid-println",
+          "line": 880,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:911:613a2dcd63ef4137",
+          "rule_id": "rust/avoid-println",
+          "line": 911,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:912:557d9a416fc412f0",
+          "rule_id": "rust/avoid-println",
+          "line": 912,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:925:65e653b51990ba18",
+          "rule_id": "rust/avoid-println",
+          "line": 925,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:931:a7778908382c6a2e",
+          "rule_id": "rust/avoid-println",
+          "line": 931,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:933:bbe7d82bf4aa99af",
+          "rule_id": "rust/avoid-println",
+          "line": 933,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:972:09efd6f176f4c322",
+          "rule_id": "rust/avoid-println",
+          "line": 972,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:982:8fccc307f6d6839e",
+          "rule_id": "rust/avoid-println",
+          "line": 982,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1020:1ec541d05f0d0fc4",
+          "rule_id": "rust/avoid-println",
+          "line": 1020,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1034:6396c4fe9bae20be",
+          "rule_id": "rust/avoid-println",
+          "line": 1034,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1036:dcd7019168eaba48",
+          "rule_id": "rust/avoid-println",
+          "line": 1036,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1047:5fa517db96a38264",
+          "rule_id": "rust/avoid-println",
+          "line": 1047,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1054:210dfb3a812ff9fa",
+          "rule_id": "rust/avoid-println",
+          "line": 1054,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1087:6ae6263e65118fa3",
+          "rule_id": "rust/avoid-println",
+          "line": 1087,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1119:f91e92c9d8d18b9a",
+          "rule_id": "rust/avoid-println",
+          "line": 1119,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1122:5cd50e85c53194be",
+          "rule_id": "rust/avoid-println",
+          "line": 1122,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1136:123b467dce475dff",
+          "rule_id": "rust/avoid-println",
+          "line": 1136,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1150:c1d56b3ae3eb6fe5",
+          "rule_id": "rust/avoid-println",
+          "line": 1150,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1168:6fb41d1cfa5d1bca",
+          "rule_id": "rust/avoid-println",
+          "line": 1168,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1186:df2dec95d14b3578",
+          "rule_id": "rust/avoid-println",
+          "line": 1186,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1189:4002fad1b85decd4",
+          "rule_id": "rust/avoid-println",
+          "line": 1189,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1209:9726eb128f042613",
+          "rule_id": "rust/avoid-println",
+          "line": 1209,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1211:78618a2b11d51329",
+          "rule_id": "rust/avoid-println",
+          "line": 1211,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1215:514473c78d0446c3",
+          "rule_id": "rust/avoid-println",
+          "line": 1215,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1219:91d85e5012b5de02",
+          "rule_id": "rust/avoid-println",
+          "line": 1219,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1226:c5dd853c1eff1512",
+          "rule_id": "rust/avoid-println",
+          "line": 1226,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1251:ac9d8dfb29ebfae2",
+          "rule_id": "rust/avoid-println",
+          "line": 1251,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1256:83b6f888c6a10dd8",
+          "rule_id": "rust/avoid-println",
+          "line": 1256,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1263:b46a760d5daf8281",
+          "rule_id": "rust/avoid-println",
+          "line": 1263,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1268:4873bda5f106e7fb",
+          "rule_id": "rust/avoid-println",
+          "line": 1268,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1270:523ebca87427d2f2",
+          "rule_id": "rust/avoid-println",
+          "line": 1270,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1273:224a9100530e4a8b",
+          "rule_id": "rust/avoid-println",
+          "line": 1273,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1479:e26372c47294fab0",
+          "rule_id": "rust/avoid-println",
+          "line": 1479,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1481:500d1d1a0ded8756",
+          "rule_id": "rust/avoid-println",
+          "line": 1481,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1513:0e56d92f943702d7",
+          "rule_id": "rust/avoid-println",
+          "line": 1513,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1515:712c56d68cbe72bf",
+          "rule_id": "rust/avoid-println",
+          "line": 1515,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1946:53317493ed6dc564",
+          "rule_id": "rust/avoid-println",
+          "line": 1946,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:1948:0be52145f3ea7a51",
+          "rule_id": "rust/avoid-println",
+          "line": 1948,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-expect:418:861562265fa4c406",
+          "rule_id": "rust/avoid-expect",
+          "line": 418,
+          "message": "Use `?` or `.map_err()` for error propagation instead of .expect()"
+        }
+      ]
+    },
+    "scanner/nosonar.rs": {
+      "hash": "e1a6f53a0f40da89",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:25:56c1e7287edb3fdf",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 25,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:26:aaf9842aef765353",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 26,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        },
+        {
+          "key": "rust/avoid-unwrap:27:e5217f40b24dddba",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 27,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "scanner/rules.rs": {
+      "hash": "b4d7348522f98a02",
+      "issues": [
+        {
+          "key": "rust/avoid-println:27:1dea2db1abbb27ce",
+          "rule_id": "rust/avoid-println",
+          "line": 27,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:28:f3f7c1d8737d1334",
+          "rule_id": "rust/avoid-println",
+          "line": 28,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:52:3f30ac4e68435cf7",
+          "rule_id": "rust/avoid-println",
+          "line": 52,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:60:5df3bd12738018fa",
+          "rule_id": "rust/avoid-println",
+          "line": 60,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:63:e3132d8572b12570",
+          "rule_id": "rust/avoid-println",
+          "line": 63,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:64:da020c2a6e7be687",
+          "rule_id": "rust/avoid-println",
+          "line": 64,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:99:ad175ae05ca53143",
+          "rule_id": "rust/avoid-println",
+          "line": 99,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-unwrap:99:66cb0186273f1c98",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 99,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "setup.rs": {
+      "hash": "aca584ba3bfcc218",
+      "issues": [
+        {
+          "key": "rust/avoid-println:93:5f21cfc3b359eb2f",
+          "rule_id": "rust/avoid-println",
+          "line": 93,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:94:1d7e8c3c58ab6a69",
+          "rule_id": "rust/avoid-println",
+          "line": 94,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:95:a8f2f62a89e61ea6",
+          "rule_id": "rust/avoid-println",
+          "line": 95,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:99:ad175ae05ca53143",
+          "rule_id": "rust/avoid-println",
+          "line": 99,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:110:dc32887a093e0802",
+          "rule_id": "rust/avoid-println",
+          "line": 110,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:111:25afbf7e06d2b685",
+          "rule_id": "rust/avoid-println",
+          "line": 111,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:112:7c72be2ca7bbf9a3",
+          "rule_id": "rust/avoid-println",
+          "line": 112,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:113:1790e05aea406ef7",
+          "rule_id": "rust/avoid-println",
+          "line": 113,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:114:db5bd4f4cf413d3e",
+          "rule_id": "rust/avoid-println",
+          "line": 114,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:118:57102cb51a776a2a",
+          "rule_id": "rust/avoid-println",
+          "line": 118,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:122:f08d72bc251811de",
+          "rule_id": "rust/avoid-println",
+          "line": 122,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:126:03544ea247500053",
+          "rule_id": "rust/avoid-println",
+          "line": 126,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:133:db9681656941b30c",
+          "rule_id": "rust/avoid-println",
+          "line": 133,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:134:b98a76a121b6ca05",
+          "rule_id": "rust/avoid-println",
+          "line": 134,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:135:cfb1b9d383f27b7e",
+          "rule_id": "rust/avoid-println",
+          "line": 135,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:142:5d4950c0dd985731",
+          "rule_id": "rust/avoid-println",
+          "line": 142,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:143:3d35c6d0ca01ed74",
+          "rule_id": "rust/avoid-println",
+          "line": 143,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:148:905ef3f793c6295c",
+          "rule_id": "rust/avoid-println",
+          "line": 148,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:150:e29d492f354a0c25",
+          "rule_id": "rust/avoid-println",
+          "line": 150,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:153:b7e5648143d5c6e0",
+          "rule_id": "rust/avoid-println",
+          "line": 153,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:155:1508e9b90d784116",
+          "rule_id": "rust/avoid-println",
+          "line": 155,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:164:299f185314863689",
+          "rule_id": "rust/avoid-println",
+          "line": 164,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:182:b6f8d87a087508bb",
+          "rule_id": "rust/avoid-println",
+          "line": 182,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:194:2c55c8fef5f881cf",
+          "rule_id": "rust/avoid-println",
+          "line": 194,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:195:1475006f4e34f299",
+          "rule_id": "rust/avoid-println",
+          "line": 195,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:215:1f338a5be73c533e",
+          "rule_id": "rust/avoid-println",
+          "line": 215,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:216:d62d36970366a030",
+          "rule_id": "rust/avoid-println",
+          "line": 216,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:221:b127098a8e0aefaf",
+          "rule_id": "rust/avoid-println",
+          "line": 221,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:222:5438b2e321766820",
+          "rule_id": "rust/avoid-println",
+          "line": 222,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:223:1073181543e55547",
+          "rule_id": "rust/avoid-println",
+          "line": 223,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:224:5f729ea98266b68f",
+          "rule_id": "rust/avoid-println",
+          "line": 224,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:226:72c5cc2f3d49945d",
+          "rule_id": "rust/avoid-println",
+          "line": 226,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:229:77192a0a518a3863",
+          "rule_id": "rust/avoid-println",
+          "line": 229,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:231:d1049cc81f4d5617",
+          "rule_id": "rust/avoid-println",
+          "line": 231,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:232:f0ea55bd29b6e7f1",
+          "rule_id": "rust/avoid-println",
+          "line": 232,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:233:1ad0d09d9844474d",
+          "rule_id": "rust/avoid-println",
+          "line": 233,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:234:90e162264da9a203",
+          "rule_id": "rust/avoid-println",
+          "line": 234,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:235:f7962ac3a1ab7b26",
+          "rule_id": "rust/avoid-println",
+          "line": 235,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        }
+      ]
+    },
+    "state.rs": {
+      "hash": "43322ed6c0a52fea",
+      "issues": [
+        {
+          "key": "rust/avoid-unwrap:267:bc8683a37783996a",
+          "rule_id": "rust/avoid-unwrap",
+          "line": 267,
+          "message": "Avoid .unwrap() — use `?`, `ok_or()`, or match for error handling"
+        }
+      ]
+    },
+    "updater.rs": {
+      "hash": "30d54acadb49bd24",
+      "issues": [
+        {
+          "key": "rust/avoid-println:203:a2d96ffaa35578d8",
+          "rule_id": "rust/avoid-println",
+          "line": 203,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:227:b2e90f4c13046e54",
+          "rule_id": "rust/avoid-println",
+          "line": 227,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:235:f7962ac3a1ab7b26",
+          "rule_id": "rust/avoid-println",
+          "line": 235,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:241:227f25fd040d8946",
+          "rule_id": "rust/avoid-println",
+          "line": 241,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:245:d0d9bc141ab52bb8",
+          "rule_id": "rust/avoid-println",
+          "line": 245,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:268:4c3b9cb18ca3d3fc",
+          "rule_id": "rust/avoid-println",
+          "line": 268,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:277:3e048fa8248698bf",
+          "rule_id": "rust/avoid-println",
+          "line": 277,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:282:d91250fb8a5af271",
+          "rule_id": "rust/avoid-println",
+          "line": 282,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        },
+        {
+          "key": "rust/avoid-println:286:2a53e939462d3d0b",
+          "rule_id": "rust/avoid-println",
+          "line": 286,
+          "message": "Use `tracing::info!` or `log::info!` instead of println!"
+        }
+      ]
+    },
+    "util/mod.rs": {
+      "hash": "c319cbc9d640c072",
+      "issues": []
+    },
+    "util/path.rs": {
+      "hash": "bfded5b91ba96d60",
+      "issues": []
+    }
+  },
+  "version": null
+}
