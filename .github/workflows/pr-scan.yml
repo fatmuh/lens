@@ -3,8 +3,6 @@ name: Lens PR Scan
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-  pull_request_target:
-    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -24,33 +22,16 @@ jobs:
       - name: Install Lens
         shell: bash
         run: |
-          if ! command -v lens &> /dev/null; then
-            echo "📦 Installing Lens..."
-            LATEST=$(curl -sL https://api.github.com/repos/fatmuh/lens/releases/latest | grep '"tag_name"' | head -1 | sed 's/.*"v\(.*\)".*/\1/')
-            echo "   Latest version: v${LATEST}"
-            curl -sL "https://github.com/fatmuh/lens/releases/download/v${LATEST}/lens-x86_64-unknown-linux-musl.tar.gz" | tar xz -C /usr/local/bin
-            chmod +x /usr/local/bin/lens
+          if command -v lens &> /dev/null; then
+            echo "Lens already installed: $(lens --version)"
+            exit 0
           fi
+          echo "Installing Lens..."
+          LATEST=$(curl -sL https://api.github.com/repos/fatmuh/lens/releases/latest | grep '"tag_name"' | head -1 | sed 's/.*"v\(.*\)".*/\1/')
+          echo "  Latest: v${LATEST}"
+          curl -sL "https://github.com/fatmuh/lens/releases/download/v${LATEST}/lens-x86_64-unknown-linux-musl.tar.gz" | tar xz -C /usr/local/bin
+          chmod +x /usr/local/bin/lens
           lens --version
-
-      - name: Get changed files
-        id: changed
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE="${{ github.base_ref }}"
-            HEAD="${{ github.head_ref }}"
-            git fetch origin "${BASE}" --depth=1 2>/dev/null || true
-            CHANGED=$(git diff --name-only origin/${BASE}...HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
-          else
-            CHANGED=$(git diff --name-only HEAD~1 HEAD)
-          fi
-          echo "files<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGED" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          COUNT=$(echo "$CHANGED" | grep -c '.' || true)
-          echo "count=${COUNT}" >> $GITHUB_OUTPUT
-          echo "📋 Changed files: ${COUNT}"
 
       - name: Run Lens scan
         id: scan
@@ -58,160 +39,41 @@ jobs:
         run: |
           set +e
           lens scan . --format json --quiet > /tmp/lens-results.json 2>/dev/null
-          SCAN_EXIT=$?
+          echo "exit=$?" >> $GITHUB_OUTPUT
           set -e
-          
-          # Always succeed — we report in the comment
-          echo "scan_exit=${SCAN_EXIT}" >> $GITHUB_OUTPUT
 
       - name: Run dependency check
-        id: deps
+        if: always()
         shell: bash
         continue-on-error: true
         run: |
           lens dep . --format json --quiet > /tmp/lens-deps.json 2>/dev/null || true
 
       - name: Build PR comment
+        if: always()
         shell: bash
         run: |
-          cat > /tmp/lens-comment.md << 'HEADER'
-          <!-- lens-ci-comment -->
-          ## 🔍 Lens Code Quality Report
-          HEADER
-
-          # Parse scan results
-          if [ -f /tmp/lens-results.json ]; then
-            python3 -c '
-          import json, sys
-
-          with open("/tmp/lens-results.json") as f:
-              d = json.load(f)
-
-          summary = d.get("summary", {})
-          metrics = d.get("metrics", {})
-          issues = d.get("issues", [])
-          ratings = d.get("quality_ratings", {})
-          dup = d.get("duplication", {})
-          cov = d.get("coverage", {})
-
-          total_files = summary.get("total_files", 0)
-          duration = d.get("scan", {}).get("duration_ms", 0)
-
-          print(f"| Metric | Value |")
-          print(f"|--------|-------|")
-          print(f"| Files scanned | {total_files} |")
-          print(f|"| Duration | {duration}ms |")
-          if metrics:
-              print(f"| LOC | {metrics.get('total_loc', '-')} |")
-              print(f"| Functions | {metrics.get('total_functions', '-')} |")
-              print(f"| Complexity | {metrics.get('total_cyclomatic_complexity', '-')} |")
-          if dup:
-              print(f"| Duplication | {dup.get('duplication_percent', 0):.2f}% |")
-          if cov:
-              print(f"| Coverage | {cov.get('coverage_percent', 0):.2f}% |")
-          print()
-
-          # Ratings
-          if ratings:
-              print("| Category | Rating |")
-              print("|----------|--------|")
-              for cat, r in ratings.items():
-                  emoji = {"A": "🟢", "B": "🟡", "C": "🟠", "D": "🔴", "E": "🔴"}.get(r, "⚪")
-                  print(f"| {cat.title()} | {emoji} {r} |")
-              print()
-
-          # Issues by severity
-          sev_counts = {}
-          for i in issues:
-              s = i.get("severity", "info")
-              sev_counts[s] = sev_counts.get(s, 0) + 1
-
-          if issues:
-              blocker = sev_counts.get("blocker", 0)
-              critical = sev_counts.get("critical", 0)
-              major = sev_counts.get("major", 0)
-              minor = sev_counts.get("minor", 0)
-              info = sev_counts.get("info", 0)
-              
-              print(f"### Issues: {len(issues)} total")
-              print(f"- 🔴 Blocker: {blocker}")
-              print(f"- 🟠 Critical: {critical}")
-              print(f"- 🟡 Major: {major}")
-              print(f"- 🔵 Minor: {minor}")
-              print(f"- ⚪ Info: {info}")
-              print()
-              
-              # Top issues (max 10)
-              print("<details><summary>📋 Top issues</summary>")
-              print()
-              print("| Severity | File | Line | Rule | Message |")
-              print("|----------|------|------|------|---------|")
-              for i in issues[:15]:
-                  file = i.get("file", "?").split("/")[-1]
-                  line = i.get("start_line", "?")
-                  rule = i.get("rule_id", "?")
-                  msg = i.get("message", "")[:60]
-                  sev = i.get("severity", "info")
-                  print(f"| {sev} | {file} | L{line} | {rule} | {msg} |")
-              print()
-              print("</details>")
-              print()
-          else:
-              print("✅ No issues found!")
-              print()
-          ' >> /tmp/lens-comment.md
-          fi
-
-          # Parse dep results
-          if [ -f /tmp/lens-deps.json ] && grep -q "vulnerabilities" /tmp/lens-deps.json 2>/dev/null; then
-              python3 -c '
-          import json
-          with open("/tmp/lens-deps.json") as f:
-              d = json.load(f)
-          vulns = d.get("vulnerabilities", [])
-          total = d.get("total_scanned", 0)
-          print(f"### 🛡️ Dependencies: {total} scanned, {len(vulns)} vulnerable")
-          if vulns:
-              print()
-              print("| Severity | Package | Version | Advisory |")
-              print("|----------|---------|---------|----------|")
-              for v in vulns[:10]:
-                  sev = v.get("severity", "info")
-                  pkg = v.get("package", "?")
-                  ver = v.get("version", "?")
-                  url = v.get("url", "")
-                  print(f"| {sev} | {pkg} | {ver} | [🔗]({url}) |")
-              print()
-          else:
-              print("✅ No known vulnerabilities")
-              print()
-          ' >> /tmp/lens-comment.md
-          fi
-
-          # Footer
-          VERSION=$(lens --version 2>/dev/null || echo "lens")
-          echo "" >> /tmp/lens-comment.md
-          echo "---" >> /tmp/lens-comment.md
-          echo "<sup>Generated by ${VERSION} • [Docs](https://docs.lenscan.dev)</sup>" >> /tmp/lens-comment.md
+          python3 scripts/build-pr-comment.py > /tmp/lens-comment.md
+          cat /tmp/lens-comment.md
 
       - name: Post PR comment
-        if: github.event_name == 'pull_request'
+        if: always() && github.event.pull_request.number != ''
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
             const body = fs.readFileSync('/tmp/lens-comment.md', 'utf8');
-            
+
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
-            
+
             const marker = '<!-- lens-ci-comment -->';
             const existing = comments.find(c => c.body.includes(marker));
-            
+
             if (existing) {
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,
@@ -228,8 +90,21 @@ jobs:
               });
             }
 
-      - name: Quality gate
-        if: steps.scan.outputs.scan_exit != '0'
+      - name: Upload SARIF
+        if: always()
+        shell: bash
         run: |
-          echo "::warning::Lens quality gate failed — see PR comment for details"
-          # Don't fail the PR — just warn
+          lens scan . --format sarif --quiet > lens-results.sarif 2>/dev/null || true
+
+      - name: Upload to Code Scanning
+        if: always() && hashFiles('lens-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true
+        with:
+          sarif_file: lens-results.sarif
+          category: lens
+
+      - name: Quality gate
+        if: steps.scan.outputs.exit != '0'
+        run: |
+          echo "::warning::Lens quality gate reported issues — see PR comment"
