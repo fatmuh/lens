@@ -50,7 +50,7 @@ $ lens scan .
       5  no-console
       4  go/avoid-print
 
-  ℹ 610 rules, 4 languages, custom rules, security taint analysis,
+  ℹ 618 rules, 5 languages, custom rules, security taint analysis,
     SonarQube-compatible duplication, and coverage parsing.
 ```
 
@@ -68,7 +68,7 @@ Lens is the **developer-first alternative**:
 
 - **Single static binary** — no runtime, no server, no DB. Just download and run.
 - **Sub-second to 15-second scans** for projects up to 1M LOC.
-- **610 rules** across 4 languages, with custom rules support.
+- **618 rules** across 5 languages, with custom rules support.
 - **Dependency scanning** — checks npm, crates.io, Go, and Pub packages against the OSV database.
 - **DAST scanning** — OWASP ZAP integration for dynamic security testing.
 - **AI-powered auto-fix** — fix issues, generate tests, refactor duplicates.
@@ -126,8 +126,8 @@ lens scan . --format sarif > lens.sarif
 
 | Capability | Details |
 |---|---|
-| **4 languages** | TypeScript/JS, Dart/Flutter, Go, Rust |
-| **610 rules** | 99 TS/JS + 6 Dart + 6 Go + 6 Rust built-in + 493 SonarJS metadata |
+| **5 languages** | TypeScript/JS, Dart/Flutter, Go, Rust, Python |
+| **618 rules** | 99 TS/JS + 6 Dart + 6 Go + 6 Rust + 8 Python built-in + 493 SonarJS metadata |
 | **Custom rules** | Regex-based rules in `quality-gate.toml` |
 | **Metrics** | LOC, complexity, function count, classes, enums, interfaces |
 | **Duplication** | SonarQube-compatible line-based detection |
@@ -209,6 +209,10 @@ AST metrics including structs, interfaces, and type declarations. Error checking
 ### Rust (6 rules)
 
 Lens scans its own source code. Structs, enums, traits, closures. Nested block comments and raw strings handled.
+
+### Python (8 rules)
+
+Full AST metrics, CPD tokenizer (f-strings, triple quotes, raw/byte strings). Rules: mutable defaults, bare except, wildcard imports, docstrings, return types.
 
 ### Custom rules
 
@@ -356,7 +360,7 @@ lens:
 | **Setup** | Download binary → done | JVM + PostgreSQL + server |
 | **Scan time** | ~15 seconds | minutes (with server) |
 | **Languages** | TS/JS, Dart, Go, Rust | 30+ languages |
-| **Rules** | 610 + custom regex | 3000+ (per language) |
+| **Rules** | 618 + custom regex | 3000+ (per language) |
 | **Security taint analysis** | ✅ (8 TS + 3 Dart vuln classes) | ✅ |
 | **Dependency scanning** | ✅ (OSV database) | ✅ (via plugins) |
 | **DAST scanning** | ✅ (OWASP ZAP) | ❌ |
@@ -380,8 +384,8 @@ lens:
 
 | Feature | Status |
 |---|---|
-| **4 languages** (TS/JS, Dart, Go, Rust) | ✅ |
-| **610 rules** + custom regex rules | ✅ |
+| **5 languages** (TS/JS, Dart, Go, Rust, Python) | ✅ |
+| **618 rules** + custom regex rules | ✅ |
 | **SonarQube-compatible duplication** | ✅ |
 | **Coverage parsing** (LCOV, Cobertura, JaCoCo) | ✅ |
 | **Security taint analysis** | ✅ |
@@ -392,7 +396,7 @@ lens:
 | **CI command** (`lens ci`) | ✅ |
 | GitHub App (PR bot) | 🔜 |
 | VS Code extension | 🔜 |
-| Python support | 🔜 |
+| Python support | ✅ |
 | Java/Kotlin support | Planned |
 
 ---
