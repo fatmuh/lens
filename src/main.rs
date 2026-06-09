@@ -13,6 +13,7 @@ mod analyzer;
 mod cli;
 mod config;
 mod coverage;
+mod dependency;
 mod rating;
 mod report;
 mod rules;
@@ -52,6 +53,7 @@ fn run(cli: Cli) -> Result<ExitCode> {
         Command::Rules(args) => scanner::rules::list(args),
         Command::Ci(args) => scanner::run_ci(cli.config, args),
         Command::Update(args) => updater::run_update(args),
+        Command::Dep(args) => dependency::run_dep(args),
         Command::Version => {
             println!("lens {}", env!("CARGO_PKG_VERSION"));
             println!("rust  {}", rustc_version_runtime());

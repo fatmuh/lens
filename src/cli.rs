@@ -72,6 +72,10 @@ pub enum Command {
     /// Self-update to the latest release from GitHub.
     #[command(visible_alias = "u")]
     Update(UpdateArgs),
+
+    /// Scan dependencies for known vulnerabilities (OSV database).
+    #[command(visible_alias = "d")]
+    Dep(DepArgs),
 }
 
 #[derive(Debug, Args)]
@@ -352,6 +356,25 @@ pub struct UpdateArgs {
     /// Only check for updates — don't download or install.
     #[arg(long)]
     pub check: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct DepArgs {
+    /// Directory to scan for dependency files (default: current dir).
+    #[arg(value_name = "PATH", default_value = ".")]
+    pub path: String,
+
+    /// Only list dependencies without querying OSV.
+    #[arg(long)]
+    pub audit_only: bool,
+
+    /// Exit with non-zero code if critical/high vulnerabilities found.
+    #[arg(long)]
+    pub gate: bool,
+
+    /// Output format.
+    #[arg(long, short = 'f', value_enum, default_value_t = crate::cli::Format::Terminal)]
+    pub format: crate::cli::Format,
 }
 
 #[derive(Debug, Args)]

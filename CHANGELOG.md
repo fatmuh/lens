@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-06-09
+
+### Added
+
+- **`lens dep` — Dependency vulnerability scanner** using OSV (Open Source Vulnerabilities) database
+  - Queries https://osv.dev for known CVEs (free, no API key)
+  - Supports 4 ecosystems:
+    - npm (`package-lock.json`)
+    - crates.io (`Cargo.lock`)
+    - Go modules (`go.sum`)
+    - Pub (`pubspec.lock`)
+  - Batch queries (up to 1000 packages per request)
+  - CVSS v3 severity classification → Blocker/Critical/Major/Minor/Info
+  - `--audit-only` flag: list dependencies without querying OSV
+  - `--gate` flag: exit 1 on critical/high vulnerabilities
+  - `--format json`: machine-readable JSON output
+  - Advisory URLs and alias tracking (CVE, GHSA)
+  - 9 unit tests for lock file parsers + 5 for OSV classification
+
 ## [0.7.0] — 2026-06-09
 
 ### Added
