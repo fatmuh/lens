@@ -22,6 +22,7 @@ mod setup;
 mod state;
 mod updater;
 mod util;
+mod zap;
 
 use cli::{Cli, Command};
 
@@ -54,6 +55,7 @@ fn run(cli: Cli) -> Result<ExitCode> {
         Command::Ci(args) => scanner::run_ci(cli.config, args),
         Command::Update(args) => updater::run_update(args),
         Command::Dep(args) => dependency::run_dep(args),
+        Command::Zap(args) => zap::run_zap(args),
         Command::Version => {
             println!("lens {}", env!("CARGO_PKG_VERSION"));
             println!("rust  {}", rustc_version_runtime());

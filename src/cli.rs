@@ -76,6 +76,10 @@ pub enum Command {
     /// Scan dependencies for known vulnerabilities (OSV database).
     #[command(visible_alias = "d")]
     Dep(DepArgs),
+
+    /// Dynamic security scan using OWASP ZAP.
+    #[command(visible_alias = "z")]
+    Zap(ZapArgs),
 }
 
 #[derive(Debug, Args)]
@@ -369,6 +373,53 @@ pub struct DepArgs {
     pub audit_only: bool,
 
     /// Exit with non-zero code if critical/high vulnerabilities found.
+    #[arg(long)]
+    pub gate: bool,
+
+    /// Output format.
+    #[arg(long, short = 'f', value_enum, default_value_t = crate::cli::Format::Terminal)]
+    pub format: crate::cli::Format,
+}
+
+#[derive(Debug, Args)]
+pub struct ZapArgs {
+    /// Target URL to scan (e.g. http://localhost:3000).
+    #[arg(value_name = "URL")]
+    pub target: String,
+
+    /// ZAP API host (default: http://127.0.0.1:8080).
+    #[arg(long)]
+    pub zap_host: Option<String>,
+
+    /// ZAP API key (default: empty for local).
+    #[arg(long)]
+    pub zap_key: Option<String>,
+
+    /// ZAP Docker image (default: zaproxy/zap-stable).
+    #[arg(long, default_value = "zaproxy/zap-stable")]
+    pub zap_image: String,
+
+    /// Port for ZAP container (default: 8080).
+    #[arg(long)]
+    pub zap_port: Option<u16>,
+
+    /// Don't start a Docker container — connect to existing ZAP.
+    #[arg(long)]
+    pub no_docker: bool,
+
+    /// Use AJAX spider for SPA applications.
+    #[arg(long)]
+    pub ajax: bool,
+
+    /// Spider max depth (default: 5).
+    #[arg(long)]
+    pub max_depth: Option<u32>,
+
+    /// Timeout per phase in seconds (default: 120).
+    #[arg(long, default_value_t = 120)]
+    pub timeout: u64,
+
+    /// Exit with non-zero code if high/medium vulnerabilities found.
     #[arg(long)]
     pub gate: bool,
 

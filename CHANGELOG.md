@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-06-09
+
+### Added
+
+- **`lens zap` — Dynamic security scanning with OWASP ZAP**
+  - Auto-starts `zaproxy/zap-stable` Docker container
+  - Falls back to connecting to existing ZAP instance
+  - Spider + optional AJAX spider for SPAs
+  - Active scan with configurable timeout
+  - Alerts reported with risk level, CWE ID, description, solution, and URLs
+  - `--gate` flag: exit 1 on high/medium vulnerabilities
+  - `--format json`: machine-readable output
+  - `--no-docker`: skip Docker, connect to running ZAP
+  - `--ajax`: AJAX spider for Single Page Applications
+  - `--max-depth`: spider depth (default: 5)
+  - `--zap-host`, `--zap-key`, `--zap-port`, `--zap-image`: full ZAP config
+
 ## [0.8.0] — 2026-06-09
 
 ### Added
