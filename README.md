@@ -1,6 +1,6 @@
 # Lens
 
-> **Lightweight, self-hosted code quality scanner** — issues, duplication, coverage.
+> **Lightweight, self-hosted code quality & security scanner** — issues, duplication, coverage, dependencies, DAST.
 > A single static binary alternative to SonarQube. No JVM, no DB, no server.
 
 [![CI](https://github.com/fatmuh/lens/actions/workflows/ci.yml/badge.svg)](https://github.com/fatmuh/lens/actions/workflows/ci.yml)
@@ -9,41 +9,49 @@
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
 
 ```
-$ lens scan .                                              [pos-glid-b2b — 1,206 files, 292K LOC]
+$ lens scan .
+
+  🔍 discovered 47 file(s)
 
   Lens scan results
-  ──────────────────────────────────────────────────
-  Root:     D:\Nutech\Backend\pos-glid-b2b
-  Config:   D:\Nutech\Backend\pos-glid-b2b\quality-gate.toml
-  Files:    1206
-  NOSONAR:  3 marker(s)
-  Duration: 13.18 s
+  ────────────────────────────────────────────────────────────
+  Root:     ./my-project
+  Config:   ./my-project/quality-gate.toml
+  Files:    47
+  Duration: 0.18 s
 
-  Metrics (TypeScript)
+  By language:
+  ┌──────────────┬───────┐
+  │ Language     │ Files |
+  ╞══════════════╪═══════╡
+  │ TypeScript   │    38 │
+  │ TypeScript   │     4 │
+  │ Dart         │     3 │
+  │ Go           │     2 │
+  └──────────────┴───────┘
+
+  Metrics
   ┌─────────────────────────────┬────────┐
-  │ Total LOC                   │ 292427 │
-  │ Functions                   │  18296 │
-  │ Classes                     │    813 │
-  │ Total cyclomatic complexity │  30391 │
-  │ Avg complexity / function   │   1.66 │
+  │ Total LOC                   │   4812 │
+  │ Functions                   │    312 │
+  │ Classes                     │     24 │
+  │ Total cyclomatic complexity │    418 │
+  │ Avg complexity / function   │   1.34 │
   └─────────────────────────────┴────────┘
-  🔥 Most complex: createCatalogFtlLtl() (CC=87, line 975)
 
   Duplication
-  19.84% of 1361138 tokens are duplicated (67462 shared fingerprints)
+  sonar-compat (line-based): 0.00% of 0 lines are duplicated
 
-  Top duplicate blocks:
-    1111 tokens
-      catalog.builder.spec.ts:1-192
-      catalog.builder.spec.ts:16-209
-    770 tokens
-      order-mapping.helper.ts:93-225
-      order-service.helper.ts:1772-1904
+  Issues
+  0 blocker, 0 critical, 3 major, 12 minor, 4 info
 
-  Coverage
-  0.68% of 99694 executable lines covered across 702 file(s) [format: lcov]
+  Top violated rules:
+      3  rust/avoid-unwrap
+      5  no-console
+      4  go/avoid-print
 
-✗ Quality gate: FAIL (duplication 19.84% > 3.00%, coverage 0.68% < 80.00%)
+  ℹ 610 rules, 4 languages, custom rules, security taint analysis,
+    SonarQube-compatible duplication, and coverage parsing.
 ```
 
 ---
@@ -51,14 +59,19 @@ $ lens scan .                                              [pos-glid-b2b — 1,2
 ## ✨ Why Lens?
 
 SonarQube is great, but it's:
+
 - **Heavy**: requires Java, a database, and a dedicated server.
 - **Slow**: scans take minutes because of network round-trips and server-side rendering.
-- **Vendor-tied**: the Community Edition has feature gaps, and the Developer Edition costs money.
+- **Vendor-tied**: the Community Edition has feature gaps, and paid editions cost money.
 
 Lens is the **developer-first alternative**:
-- **Single static binary** — no runtime, no server, no DB.
+
+- **Single static binary** — no runtime, no server, no DB. Just download and run.
 - **Sub-second to 15-second scans** for projects up to 1M LOC.
-- **Self-contained** — respects `.gitignore`, `.lensignore`, and `NOSONAR` comments.
+- **610 rules** across 4 languages, with custom rules support.
+- **Dependency scanning** — checks npm, crates.io, Go, and Pub packages against the OSV database.
+- **DAST scanning** — OWASP ZAP integration for dynamic security testing.
+- **AI-powered auto-fix** — fix issues, generate tests, refactor duplicates.
 - **CI-friendly** — JSON, SARIF, and HTML outputs out of the box.
 
 ---
@@ -77,131 +90,249 @@ iwr -useb https://raw.githubusercontent.com/fatmuh/lens/main/install.ps1 | iex
 curl -fsSL https://raw.githubusercontent.com/fatmuh/lens/main/install.sh | sh
 ```
 
-**Or via `cargo`:**
-```bash
-cargo install lens
-```
-
 **Or download a binary** from [GitHub Releases](https://github.com/fatmuh/lens/releases).
+
+**Or self-update** (after initial install):
+```bash
+lens update          # Download and install latest version
+lens update --check  # Just check, don't install
+```
 
 ### Use
 
 ```bash
-# 1. Create a starter config in your project
+# Initialize config
 lens init
 
-# 2. Scan the current directory
+# Scan for issues, duplication, coverage
 lens scan .
 
-# 3. Get a JSON report (for CI)
+# JSON output for CI
 lens scan . --format json
 
-# 4. Generate an HTML report
+# HTML report
 lens scan . --format html --output ./lens-report
 
-# 5. Enforce the quality gate (exit non-zero on failure)
+# Enforce quality gate
 lens scan . --gate
 
-# 6. SARIF for GitHub Code Scanning / GitLab Code Quality
+# SARIF for GitHub Code Scanning
 lens scan . --format sarif > lens.sarif
-
-# 7. Use SonarQube-compatible (line-based) duplication detection
-lens scan . --sonar-compat --min-duplicate-lines 100
 ```
 
 ---
 
 ## 📊 What it does
 
-| Capability | Status | Notes |
-|---|---|---|
-| **Metrics** (LOC, complexity, function count) | ✅ | TypeScript/TSX (more languages in Phase 7) |
-| **Duplication %** (project-wide) | ✅ | Sonar-style token shingling + winnowing |
-| **Block-level duplication** (file:line ranges) | ✅ | Longest-common-substring DP on top file pairs |
-| **Coverage parsing** | ✅ | LCOV, Cobertura XML, JaCoCo XML |
-| **NOSONAR support** | ✅ | 5 comment styles, language-aware, case-insensitive |
-| **Quality gate enforcement** | ✅ | Duplication threshold + coverage threshold |
-| **HTML report** | ✅ | Single self-contained file, no external deps |
-| **JSON output (CI-friendly)** | ✅ | Forward-compatible schema with placeholders |
-| **SARIF 2.1.0 output** | ✅ | GitHub Code Scanning, GitLab Code Quality |
-| **`.gitignore` / `.lensignore` respect** | ✅ | Includes glob whitelist, excludes blacklist |
-| **Progress bar** | ✅ | TTY-aware, configurable via `--quiet` |
-| **Rule engine (issues)** | 🚧 | Planned for Phase 2 |
-| **Watch mode** | 🚧 | Planned for Phase 6 |
+| Capability | Details |
+|---|---|
+| **4 languages** | TypeScript/JS, Dart/Flutter, Go, Rust |
+| **610 rules** | 99 TS/JS + 6 Dart + 6 Go + 6 Rust built-in + 493 SonarJS metadata |
+| **Custom rules** | Regex-based rules in `quality-gate.toml` |
+| **Metrics** | LOC, complexity, function count, classes, enums, interfaces |
+| **Duplication** | SonarQube-compatible line-based detection |
+| **Coverage** | LCOV, Cobertura XML, JaCoCo XML parsing |
+| **Security taint analysis** | SQL injection, XSS, SSRF, path traversal, prototype pollution |
+| **Dependency scanning** | OSV database (npm, crates.io, Go, Pub) |
+| **DAST scanning** | OWASP ZAP integration |
+| **AI auto-fix** | BYOK OpenAI-compatible API (Ollama supported) |
+| **NOSONAR support** | 5 comment styles, language-aware |
+| **CI/CD** | SARIF output, quality gate, PR comments |
+
+---
+
+## 🛡️ Security features
+
+### Dependency scanning (`lens dep`)
+
+Check your dependencies against the [OSV database](https://osv.dev) for known CVEs:
+
+```bash
+lens dep .                # Scan all lock files
+lens dep . --gate         # Fail CI on critical vulns
+lens dep . --format json  # Machine-readable output
+```
+
+Supports: `package-lock.json`, `Cargo.lock`, `go.sum`, `pubspec.lock`
+
+```
+$ lens dep .
+
+  🔍 Found 324 dependencies across 1 lock file(s)
+  🌐 Querying OSV database...
+
+  ⚠️ Vulnerable dependencies
+  ────────────────────────────────────────────────────────────
+  🔴 GHSA-r6hc-6qgp-3cxw Improper Input Validation [npm]
+    🔗 https://osv.dev/vulnerability/GHSA-r6hc-6qgp-3cxw
+  🟠 RUSTSEC-2024-0384 instant is unmaintained [crates.io]
+    🔗 https://osv.dev/vulnerability/RUSTSEC-2024-0384
+
+  ⚠️ 0 critical, 0 high, 0 medium, 0 low, 2 info
+```
+
+### Dynamic scanning (`lens zap`)
+
+Scan running web applications with OWASP ZAP:
+
+```bash
+lens zap http://localhost:3000             # Auto-start ZAP + scan
+lens zap http://localhost:3000 --no-docker  # Use existing ZAP
+lens zap http://localhost:3000 --gate       # Fail CI on vulns
+```
+
+### Security taint analysis
+
+Built-in intra-procedural taint tracking detects:
+
+| Language | Vulnerability classes |
+|----------|---------------------|
+| TypeScript/JS | SQL Injection, XSS, SSRF, Command Injection, Path Traversal, Prototype Pollution, Open Redirect, Log Injection |
+| Dart/Flutter | Flutter SQL Injection, Flutter HTTP Injection, Flutter Path Traversal |
+
+---
+
+## 🌍 Language support
+
+### TypeScript / JavaScript (99 rules)
+
+Full AST-based metrics, 99 built-in rules, security taint analysis, and SonarJS metadata layer (493 stubs).
+
+### Dart / Flutter (6 rules)
+
+AST metrics, CPD tokenizer, Flutter-specific rules. Test files (`_test.dart`) excluded from duplication.
+
+### Go (6 rules)
+
+AST metrics including structs, interfaces, and type declarations. Error checking, doc comment enforcement.
+
+### Rust (6 rules)
+
+Lens scans its own source code. Structs, enums, traits, closures. Nested block comments and raw strings handled.
+
+### Custom rules
+
+Define your own regex-based rules in `quality-gate.toml`:
+
+```toml
+[[rules.custom]]
+id = "no-hardcoded-secrets"
+name = "No hardcoded secrets"
+severity = "blocker"
+languages = ["typescript", "javascript", "dart"]
+pattern = '''sk-[a-zA-Z0-9]{20,}'''
+message = "Hardcoded secret detected. Use environment variables instead."
+```
+
+---
+
+## 🤖 AI-powered auto-fix
+
+Lens can fix issues, generate tests, and refactor duplicates using an OpenAI-compatible API:
+
+```bash
+# Configure AI settings
+lens setup
+
+# Fix issues
+lens fix .
+
+# Generate tests
+lens test .
+
+# Preview changes without writing
+lens fix . --dry-run
+```
+
+Works with any OpenAI-compatible API including local models via [Ollama](https://ollama.ai).
 
 ---
 
 ## ⚙️ Configuration
 
 Lens reads `quality-gate.toml` from the scan root (or pass `--config <path>`).
-See [`quality-gate.toml.example`](quality-gate.toml.example) for the full schema.
 
 ```toml
 [scan]
-exclude = ["**/node_modules/**", "**/dist/**", "**/coverage/**"]
-include = ["src/**"]                # optional whitelist
-
-[nosonar]
-enabled = true
-custom_markers = []                 # additional markers besides "NOSONAR"
+exclude = ["**/node_modules/**", "**/dist/**", "**/.dart_tool/**"]
+include = ["src/**", "lib/**"]
 
 [duplication]
-min_tokens = 100                    # minimum block size
-fail_above_percent = 3.0            # quality-gate threshold
+mode = "sonar"
+min_tokens = 100
 
 [coverage]
-report_paths = ["coverage/lcov.info", "**/cobertura-coverage.xml"]
+report_paths = ["coverage/lcov.info"]
 fail_below_percent = 80.0
-exclude = ["**/*.spec.ts", "**/*.test.ts"]   # don't count tests
 
-[issues]                            # Phase 2 — placeholder
-fail_on = ["blocker", "critical"]
+[rules]
+disabled = ["no-console", "no-magic-numbers"]
+
+# Custom regex rules
+[[rules.custom]]
+id = "no-todo-without-ticket"
+name = "TODO must have ticket"
+severity = "info"
+pattern = '''TODO(?!.*#\d+)'''
+message = "TODO should reference a ticket (e.g. TODO #1234)"
 ```
 
 ### Ignoring files
 
-Two layers, both respected:
-
 1. **`.gitignore`** — auto-detected (disable with `--no-gitignore`).
-2. **`.lensignore`** — same syntax as `.gitignore`. Useful for generated code
-   or vendored deps that git legitimately tracks but you don't want scanned.
+2. **`.lensignore`** — same syntax, for files you track in git but don't want scanned.
 
 ### NOSONAR
 
-Lens respects the standard `NOSONAR` comment in any of these styles
-(recognized per language):
+Suppress issues on specific lines:
+
+```typescript
+result.unwrap(); // NOSONAR
+```
 
 | Style | Languages |
 |---|---|
-| `// NOSONAR` | C, C++, C#, Java, Go, JS, TS, Rust, Kotlin, Swift, Scala |
+| `// NOSONAR` | C, C++, C#, Go, Java, JS, Rust, TS, Kotlin, Swift, Scala, Dart |
 | `# NOSONAR` | Python, Ruby, Shell, YAML, TOML, PHP |
 | `-- NOSONAR` | SQL, Lua, Haskell |
 | `/* NOSONAR */` | CSS, SCSS, PHP |
 | `<!-- NOSONAR -->` | HTML, XML |
 
-Match is case-insensitive. Custom markers can be added via
-`[nosonar].custom_markers`.
-
 ---
 
-## 🤖 CI integration
+## 🤝 CI/CD integration
+
+### `lens ci` — All-in-one CI command
+
+```bash
+lens ci . --gate --pr-comment
+```
+
+Outputs SARIF, runs quality gate, and optionally generates a PR comment.
 
 ### GitHub Actions
 
 ```yaml
-- name: Install lens
+- name: Install Lens
   run: |
     curl -fsSL https://raw.githubusercontent.com/fatmuh/lens/main/install.sh | sh
     echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
 - name: Scan
-  run: lens scan . --gate
+  run: lens ci . --gate
 
-- name: Upload SARIF to GitHub Code Scanning
+- name: Upload SARIF
   if: always()
   uses: github/codeql-action/upload-sarif@v3
   with:
-    sarif_file: lens.sarif
+    sarif_file: lens-results.sarif
+```
+
+### Dependency scanning in CI
+
+```yaml
+- name: Check dependencies
+  run: lens dep . --gate
 ```
 
 ### GitLab CI
@@ -210,115 +341,59 @@ Match is case-insensitive. Custom markers can be added via
 lens:
   script:
     - curl -fsSL https://raw.githubusercontent.com/fatmuh/lens/main/install.sh | sh
-    - lens scan . --format sarif --output lens.sarif
-    - lens scan . --gate
+    - lens ci . --gate --output lens-results.sarif
   artifacts:
     reports:
-      codequality: lens.sarif
+      codequality: lens-results.sarif
 ```
-
-### JSON output for custom CI
-
-```json
-{
-  "lens_version": "0.3.0",
-  "scan": { "root": "...", "duration_ms": 13180 },
-  "summary": {
-    "total_files": 1206,
-    "nosonar_markers": 3,
-    "by_language": { "TypeScript": 1206 }
-  },
-  "metrics": {
-    "total_loc": 292427,
-    "functions": 18296,
-    "cyclomatic_complexity": 30391,
-    "avg_complexity_per_function": 1.66,
-    "max_function": {
-      "name": "createCatalogFtlLtl",
-      "complexity": 87,
-      "start_line": 975
-    }
-  },
-  "duplication": {
-    "duplication_percent": 19.84,
-    "shared_fingerprint_count": 67462,
-    "blocks": [
-      {
-        "token_count": 1111,
-        "occurrences": [
-          { "file": "src/.../catalog.builder.spec.ts", "start_line": 1,  "end_line": 192 },
-          { "file": "src/.../catalog.builder.spec.ts", "start_line": 16, "end_line": 209 }
-        ]
-      }
-    ]
-  },
-  "coverage": {
-    "format": "lcov",
-    "file_count": 702,
-    "coverage_percent": 0.68,
-    "files": [
-      { "file": "src/app.module.ts", "total_lines": 146, "covered_lines": 0, "coverage_percent": 0.0 }
-    ]
-  },
-  "issues": []
-}
-```
-
----
-
-## 🔬 Sample HTML report
-
-Open `lens-report/index.html` after running `lens scan . --format html`:
-
-- **Stats cards** for files, LOC, functions, complexity, coverage %, duplication %.
-- **Color-coded** thresholds (green / yellow / red).
-- **Top 5 most complex functions** with clickable file paths.
-- **Top 20 duplicate blocks** with `file:start_line-end_line` for each occurrence.
-- **Top 10 files with lowest coverage**.
-- Single self-contained HTML file with inline CSS — no external requests.
 
 ---
 
 ## 🆚 Lens vs SonarQube
 
-| Feature | Lens 0.1.0 | SonarQube Community |
+| Feature | Lens v0.9 | SonarQube Community |
 |---|---|---|
-| Single static binary | **✅** | ❌ (JVM + DB + server) |
-| Setup time | **< 1 minute** | 30+ minutes |
-| Scan time (1M LOC) | **~15 seconds** | minutes (with server) |
-| Metrics (LOC, complexity) | ✅ (TS) | ✅ (30+ languages) |
-| Duplication % | ✅ | ✅ |
-| Block-level duplication | ✅ | ✅ (web UI) |
-| Coverage parsing | ✅ (LCOV, Cobertura, JaCoCo) | ✅ (many formats) |
-| Quality gate | ✅ (dup + coverage) | ✅ (more rules) |
-| Rule engine (issues) | 🚧 Phase 2 | ✅ |
-| HTML report | ✅ | ✅ |
-| JSON / SARIF output | ✅ | ✅ |
-| Inline issue highlighting | 🚧 Phase 5+ | ✅ |
-| Multi-language | TS, JS, TSX, JSX, +25 detected | 30+ |
-| Self-hosted | **✅** | ✅ |
-| Free | **✅** | ✅ (Community) / 💰 (Developer) |
+| **Setup** | Download binary → done | JVM + PostgreSQL + server |
+| **Scan time** | ~15 seconds | minutes (with server) |
+| **Languages** | TS/JS, Dart, Go, Rust | 30+ languages |
+| **Rules** | 610 + custom regex | 3000+ (per language) |
+| **Security taint analysis** | ✅ (8 TS + 3 Dart vuln classes) | ✅ |
+| **Dependency scanning** | ✅ (OSV database) | ✅ (via plugins) |
+| **DAST scanning** | ✅ (OWASP ZAP) | ❌ |
+| **AI auto-fix** | ✅ (BYOK) | ❌ |
+| **Custom rules** | ✅ (regex in config) | ✅ (Java plugins) |
+| **Quality gate** | ✅ | ✅ |
+| **Duplication** | ✅ (SonarQube-compatible) | ✅ |
+| **Coverage** | ✅ (LCOV, Cobertura, JaCoCo) | ✅ |
+| **HTML report** | ✅ | ✅ |
+| **SARIF output** | ✅ | ✅ |
+| **Self-hosted** | ✅ | ✅ |
+| **Free** | ✅ | ✅ (Community) / 💰 (Developer) |
+| **Binary size** | ~4 MB | ~300 MB |
 
-**When to choose Lens**: developer workflow, single-machine CI, fast feedback, no infra.
-**When to choose SonarQube**: enterprise deployment, multi-language rules, PR decoration.
+**When to choose Lens**: developer workflow, fast CI, no infra, AI-powered fixes, DAST scanning.
+**When to choose SonarQube**: enterprise deployment, 30+ language support, web UI, PR decoration.
 
 ---
 
 ## 🗺️ Roadmap
 
-| Phase | Status | Feature |
-|---|---|---|
-| **0** | ✅ | Foundation: CLI, config, file discovery, NOSONAR |
-| **0.5** | ✅ | Polish: path normalization, progress bar, HTML/SARIF, JSON schema |
-| **1** | ✅ | TypeScript metrics + duplication % (shingling + winnowing) |
-| **1.5** | ✅ | Block-level duplication with line ranges |
-| **3** | ✅ | Coverage parsing (LCOV, Cobertura, JaCoCo) |
-| **2** | 🚧 | Rule engine (~10 starter rules per language) |
-| **4** | 🚧 | Interactive HTML (click-to-view code) |
-| **5** | 🚧 | More languages (Rust, Python, Go, Java metrics) |
-| **6** | 🚧 | Watch mode + monorepo support |
-| **7** | 🚧 | Plugin system for custom rules |
-| **8** | 🚧 | Inline source highlighting (LSP integration) |
+| Feature | Status |
+|---|---|
+| **4 languages** (TS/JS, Dart, Go, Rust) | ✅ |
+| **610 rules** + custom regex rules | ✅ |
+| **SonarQube-compatible duplication** | ✅ |
+| **Coverage parsing** (LCOV, Cobertura, JaCoCo) | ✅ |
+| **Security taint analysis** | ✅ |
+| **Dependency scanning** (OSV) | ✅ |
+| **OWASP ZAP integration** (DAST) | ✅ |
+| **AI auto-fix** (BYOK) | ✅ |
+| **Self-update** (`lens update`) | ✅ |
+| **CI command** (`lens ci`) | ✅ |
+| GitHub App (PR bot) | 🔜 |
+| VS Code extension | 🔜 |
+| Python support | 🔜 |
+| Java/Kotlin support | Planned |
 
 ---
 
@@ -333,35 +408,19 @@ cargo build --release
 
 Run tests:
 ```bash
-cargo test                       # all tests
-cargo test --bin lens            # unit tests only
-cargo test --test integration    # integration tests only
-```
-
-Run with sample data:
-```bash
-mkdir /tmp/lens-demo
-cat > /tmp/lens-demo/main.ts <<'EOF'
-function add(a: number, b: number): number {
-    if (a > 0) return a + b;
-    return b;
-}
-EOF
-./target/release/lens scan /tmp/lens-demo
+cargo test
 ```
 
 ---
 
 ## 🤝 Contributing
 
-Contributions welcome! See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development
-setup, code style, and the PR process.
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and PR process.
 
-For bug reports and feature requests, please open an issue on
-[GitHub](https://github.com/fatmuh/lens/issues).
+For bug reports and feature requests, open an issue at [GitHub Issues](https://github.com/fatmuh/lens/issues).
 
 ---
 
 ## 📄 License
 
-[MIT](LICENSE) © 2026 Lens Contributors
+[MIT](LICENSE) © 2026 Fatmuh
