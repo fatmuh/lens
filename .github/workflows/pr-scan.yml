@@ -102,13 +102,13 @@ jobs:
           print(f"| Files scanned | {total_files} |")
           print(f|"| Duration | {duration}ms |")
           if metrics:
-              print(f"| LOC | {metrics.get(\"total_loc\", \"-\")} |")
-              print(f"| Functions | {metrics.get(\"total_functions\", \"-\")} |")
-              print(f"| Complexity | {metrics.get(\"total_cyclomatic_complexity\", \"-\")} |")
+              print(f"| LOC | {metrics.get('total_loc', '-')} |")
+              print(f"| Functions | {metrics.get('total_functions', '-')} |")
+              print(f"| Complexity | {metrics.get('total_cyclomatic_complexity', '-')} |")
           if dup:
-              print(f"| Duplication | {dup.get(\"duplication_percent\", 0):.2f}% |")
+              print(f"| Duplication | {dup.get('duplication_percent', 0):.2f}% |")
           if cov:
-              print(f"| Coverage | {cov.get(\"coverage_percent\", 0):.2f}% |")
+              print(f"| Coverage | {cov.get('coverage_percent', 0):.2f}% |")
           print()
 
           # Ratings
