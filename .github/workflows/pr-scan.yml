@@ -27,9 +27,15 @@ jobs:
             exit 0
           fi
           echo "Installing Lens..."
-          LATEST=$(curl -sL https://api.github.com/repos/fatmuh/lens/releases/latest | grep '"tag_name"' | head -1 | sed 's/.*"v\(.*\)".*/\1/')
-          echo "  Latest: v${LATEST}"
-          curl -sL "https://github.com/fatmuh/lens/releases/download/v${LATEST}/lens-x86_64-unknown-linux-musl.tar.gz" | tar xz -C /usr/local/bin
+          # Get latest version
+          LATEST=$(curl -sL -H 'Accept: application/vnd.github+json' https://api.github.com/repos/fatmuh/lens/releases/latest 2>/dev/null | grep '"tag_name"' | head -1 | sed 's/.*"v\([0-9.]*\)".*/\1/')
+          if [ -z "$LATEST" ]; then
+            echo "Could not determine latest version, falling back to v0.9.0"
+            LATEST="0.9.0"
+          fi
+          echo "  Installing v${LATEST}..."
+          curl -sL "https://github.com/fatmuh/lens/releases/download/v${LATEST}/lens-x86_64-unknown-linux-musl.tar.gz" -o /tmp/lens.tar.gz
+          tar xzf /tmp/lens.tar.gz -C /usr/local/bin
           chmod +x /usr/local/bin/lens
           lens --version
 
