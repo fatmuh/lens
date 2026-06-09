@@ -15,6 +15,7 @@ pub fn get_language(lang: SrcLanguage) -> Option<Language> {
         SrcLanguage::TypeScript => Some(tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into()),
         SrcLanguage::Tsx => Some(tree_sitter_typescript::LANGUAGE_TSX.into()),
         SrcLanguage::Dart => Some(tree_sitter_dart::LANGUAGE.into()),
+        SrcLanguage::Go => Some(tree_sitter_go::LANGUAGE.into()),
         _ => None,
     }
 }

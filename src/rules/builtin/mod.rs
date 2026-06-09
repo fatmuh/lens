@@ -121,6 +121,12 @@ pub fn all_rules_with(cfg: &crate::config::RulesConfig) -> Vec<Box<dyn Rule>> {
         Box::new(dart_rules::DartPreferConstConstructors),
         Box::new(dart_rules::DartAvoidWebLibraries),
         Box::new(dart_rules::DartPreferAsyncAwait),
+        Box::new(go_rules::GoAvoidPrint),
+        Box::new(go_rules::GoAvoidEmptyBlock),
+        Box::new(go_rules::GoErrorCheck),
+        Box::new(go_rules::GoAvoidInit),
+        Box::new(go_rules::GoAvoidGlobalVar),
+        Box::new(go_rules::GoExportedComment),
         Box::new(no_new_func::NoNewFunc),
         Box::new(no_implied_eval::NoImpliedEval),
         Box::new(no_script_url::NoScriptUrl),
@@ -232,4 +238,5 @@ pub fn all_rules_with(cfg: &crate::config::RulesConfig) -> Vec<Box<dyn Rule>> {
     rules
 }
 pub mod dart_rules;
+pub mod go_rules;
 pub mod security_taint;

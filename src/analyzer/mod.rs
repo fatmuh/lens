@@ -15,6 +15,7 @@ pub mod sonar_dup;
 pub mod taint;
 pub mod tokenize;
 pub mod tokenize_dart;
+pub mod tokenize_go;
 
 use std::path::PathBuf;
 
@@ -194,10 +195,11 @@ fn analyze_file(path: &PathBuf, config: &AnalyzeConfig) -> FileAnalysis {
     // Tokenize for duplication (language-specific).
     let tokens = match lang {
         Some(Language::Dart) => tokenize_dart::tokenize_dart(&content),
+        Some(Language::Go) => tokenize_go::tokenize_go(&content),
         _ => tokenize::tokenize(&content),
     };
 
-    // Metrics — TypeScript/TSX and Dart.
+    // Metrics — TypeScript/TSX, Dart, and Go.
     let metrics = match lang {
         Some(Language::TypeScript) | Some(Language::Tsx) => {
             parser::with_parser(lang.unwrap(), &content, |tree| {
@@ -206,6 +208,9 @@ fn analyze_file(path: &PathBuf, config: &AnalyzeConfig) -> FileAnalysis {
         }
         Some(Language::Dart) => parser::with_parser(Language::Dart, &content, |tree| {
             metrics::compute(tree, &content, Language::Dart)
+        }),
+        Some(Language::Go) => parser::with_parser(Language::Go, &content, |tree| {
+            metrics::compute(tree, &content, Language::Go)
         }),
         _ => None,
     };
@@ -251,6 +256,7 @@ pub fn is_test_or_generated_file(path: &str) -> bool {
         || name.ends_with(".test.jsx")
         || name.ends_with("_test.dart")
         || name.ends_with(".test.dart")
+        || name.ends_with("_test.go")
     {
         return true;
     }

@@ -176,6 +176,72 @@ pub fn compute(tree: &Tree, source: &str, lang: Language) -> FileMetrics {
                 total_complexity += complexity;
             }
             // --- End Dart ---
+
+            // --- Go AST nodes ---
+            // Go uses: function_declaration, method_declaration
+            // struct_type (inside type_declaration), interface_type
+            "function_declaration" if lang == Language::Go => {
+                let name = extract_go_func_name(&node, source);
+                let params = count_go_params(&node, source);
+                let start = node.start_position().row as u32 + 1;
+                let end = node.end_position().row as u32 + 1;
+                let complexity = cyclomatic_complexity(&node, source);
+                functions.push(FunctionInfo {
+                    name,
+                    start_line: start,
+                    end_line: end,
+                    complexity,
+                    parameter_count: params,
+                });
+                m.function_count += 1;
+                total_complexity += complexity;
+            }
+            "method_declaration" if lang == Language::Go => {
+                let name = extract_go_method_name(&node, source);
+                let params = count_go_params(&node, source);
+                let start = node.start_position().row as u32 + 1;
+                let end = node.end_position().row as u32 + 1;
+                let complexity = cyclomatic_complexity(&node, source);
+                functions.push(FunctionInfo {
+                    name,
+                    start_line: start,
+                    end_line: end,
+                    complexity,
+                    parameter_count: params,
+                });
+                m.function_count += 1;
+                total_complexity += complexity;
+            }
+            // Go func_literal (anonymous function)
+            "func_literal" if lang == Language::Go => {
+                let params = count_go_params(&node, source);
+                let start = node.start_position().row as u32 + 1;
+                let end = node.end_position().row as u32 + 1;
+                let complexity = cyclomatic_complexity(&node, source);
+                functions.push(FunctionInfo {
+                    name: "<anonymous>".to_string(),
+                    start_line: start,
+                    end_line: end,
+                    complexity,
+                    parameter_count: params,
+                });
+                m.function_count += 1;
+                total_complexity += complexity;
+            }
+            // Go type_declaration with struct_type or interface_type
+            "type_declaration" if lang == Language::Go => {
+                // Check children for struct_type or interface_type
+                let mut cursor = node.walk();
+                for child in node.children(&mut cursor) {
+                    match child.kind() {
+                        "struct_type" => m.class_count += 1,
+                        "interface_type" => m.interface_count += 1,
+                        _ => {}
+                    }
+                }
+                m.type_alias_count += 1; // Go type declarations
+            }
+            // --- End Go ---
             _ => {}
         }
     });
@@ -349,6 +415,48 @@ fn extract_dart_method_name(node: &Node, source: &str) -> String {
     }
     "<anonymous>".to_string()
 }
+
+// ── Go helper functions ────────────────────────────────────────────
+
+fn extract_go_func_name(node: &Node, source: &str) -> String {
+    // function_declaration has a direct "name" field
+    if let Some(name_node) = node.child_by_field_name("name") {
+        if let Ok(name) = name_node.utf8_text(source.as_bytes()) {
+            return name.to_string();
+        }
+    }
+    "<anonymous>".to_string()
+}
+
+fn extract_go_method_name(node: &Node, source: &str) -> String {
+    // method_declaration has a "name" field
+    if let Some(name_node) = node.child_by_field_name("name") {
+        if let Ok(name) = name_node.utf8_text(source.as_bytes()) {
+            return name.to_string();
+        }
+    }
+    "<anonymous>".to_string()
+}
+
+fn count_go_params(node: &Node, source: &str) -> u32 {
+    // function_declaration / method_declaration has a "parameters" field
+    // containing parameter_list
+    if let Some(params) = node.child_by_field_name("parameters") {
+        let mut count = 0u32;
+        let mut cursor = params.walk();
+        for child in params.children(&mut cursor) {
+            match child.kind() {
+                "parameter_declaration" => count += 1,
+                "variadic_parameter_declaration" => count += 1,
+                _ => {}
+            }
+        }
+        return count;
+    }
+    0
+}
+
+// ── End Go helpers ────────────────────────────────────────────────
 
 fn arrow_function_name(node: &Node, source: &str) -> Option<String> {
     let parent = node.parent()?;

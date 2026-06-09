@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-06-09
+
+### Added
+
+- **Go language support** (third language after TypeScript/JS and Dart)
+  - Language detection: `.go` files → `Go` enum
+  - `tree-sitter-go` 0.25 grammar for AST parsing
+  - AST metrics: functions (`func`), methods (receiver), func literals, structs, interfaces, type declarations, complexity
+  - Go CPD tokenizer (`src/analyzer/tokenize_go.rs`): strips comments, strings, raw strings, rune literals
+  - `.go` files included in SonarQube-compatible duplication detection
+  - Test file detection: `_test.go` excluded from duplication
+  - NOSONAR: `//` style comments
+  - 6 Go-specific rules:
+    - `go/avoid-print` (minor) — use structured logging
+    - `go/avoid-empty-block` (major) — empty blocks
+    - `go/error-check` (critical) — unchecked errors
+    - `go/avoid-init` (minor) — avoid init() functions
+    - `go/avoid-global-var` (info) — avoid global variables
+    - `go/exported-comment` (info) — exported names need doc comments
+  - 12 unit tests for Go tokenizer
+
+### Rule count
+
+| Category | Count |
+|----------|-------|
+| TS/JS built-in | 99 |
+| Dart-specific | 6 |
+| Go-specific | 6 |
+| SonarJS stubs | 493 |
+| **Total** | **604** |
+
+### Dependencies
+
+- Added `tree-sitter-go` 0.25
+
 ## [0.5.0] — 2026-06-09
 
 ### Added
