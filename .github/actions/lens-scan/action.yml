@@ -48,10 +48,10 @@ outputs:
     value: ${{ steps.scan.outputs.exit }}
   issue-count:
     description: 'Total issues found'
-    value: ${{ steps.scan.outputs.issues }}
+    value: ${{ steps.parse.outputs.issues }}
   blocker-count:
     description: 'Blocker issues'
-    value: ${{ steps.scan.outputs.blockers }}
+    value: ${{ steps.parse.outputs.blockers }}
 
 runs:
   using: 'composite'
@@ -60,19 +60,22 @@ runs:
       shell: bash
       run: |
         if command -v lens &> /dev/null; then
-          echo "✅ Lens already installed: $(lens --version)"
+          echo "Lens already installed: $(lens --version)"
           exit 0
         fi
-
-        echo "📦 Installing Lens..."
+        echo "Installing Lens..."
         if [ "${{ inputs.version }}" = "latest" ]; then
-          DOWNLOAD_URL="https://github.com/fatmuh/lens/releases/latest/download/lens-x86_64-unknown-linux-musl.tar.gz"
+          LATEST=$(curl -sL -H 'Accept: application/vnd.github+json' https://api.github.com/repos/fatmuh/lens/releases/latest 2>/dev/null | grep '"tag_name"' | head -1 | sed 's/.*"v\([0-9.]*\)".*/\1/')
+          if [ -z "$LATEST" ]; then
+            echo "Could not determine latest version, falling back to v0.9.0"
+            LATEST="0.9.0"
+          fi
         else
-          DOWNLOAD_URL="https://github.com/fatmuh/lens/releases/download/v${{ inputs.version }}/lens-x86_64-unknown-linux-musl.tar.gz"
+          LATEST="${{ inputs.version }}"
         fi
-
-        echo "   Downloading: ${DOWNLOAD_URL}"
-        curl -sL "$DOWNLOAD_URL" | tar xz -C /usr/local/bin
+        echo "  Installing v${LATEST}..."
+        curl -sL "https://github.com/fatmuh/lens/releases/download/v${LATEST}/lens-x86_64-unknown-linux-musl.tar.gz" -o /tmp/lens.tar.gz
+        tar xzf /tmp/lens.tar.gz -C /usr/local/bin
         chmod +x /usr/local/bin/lens
         lens --version
 
@@ -85,18 +88,22 @@ runs:
 
         set +e
         lens $ARGS > /tmp/lens-results.json 2>/dev/null
-        EXIT=$?
+        echo "exit=$?" >> $GITHUB_OUTPUT
         set -e
 
-        echo "exit=${EXIT}" >> $GITHUB_OUTPUT
-
-        # Parse results
+    - name: Parse issue counts
+      id: parse
+      if: always()
+      shell: bash
+      run: |
+        ISSUES="0"
+        BLOCKERS="0"
         if [ -f /tmp/lens-results.json ]; then
-          ISSUES=$(python3 -c "import json; d=json.load(open('/tmp/lens-results.json')); print(len(d.get('issues',[])))" 2>/dev/null || echo "0")
-          BLOCKERS=$(python3 -c "import json; d=json.load(open('/tmp/lens-results.json')); print(sum(1 for i in d.get('issues',[]) if i.get('severity')=='blocker'))" 2>/dev/null || echo "0")
-          echo "issues=${ISSUES}" >> $GITHUB_OUTPUT
-          echo "blockers=${BLOCKERS}" >> $GITHUB_OUTPUT
+          ISSUES=$(python3 -c "import json; print(len(json.load(open('/tmp/lens-results.json')).get('issues',[])))" 2>/dev/null || echo "0")
+          BLOCKERS=$(python3 -c "import json; print(sum(1 for i in json.load(open('/tmp/lens-results.json')).get('issues',[]) if i.get('severity')=='blocker'))" 2>/dev/null || echo "0")
         fi
+        echo "issues=${ISSUES}" >> $GITHUB_OUTPUT
+        echo "blockers=${BLOCKERS}" >> $GITHUB_OUTPUT
 
     - name: Run dependency scan
       if: inputs.deps == 'true'
@@ -109,126 +116,7 @@ runs:
       if: inputs.comment == 'true'
       shell: bash
       run: |
-        cat > /tmp/lens-comment.md << 'HEADER'
-        <!-- lens-ci-comment -->
-        ## 🔍 Lens Code Quality Report
-        HEADER
-
-        if [ -f /tmp/lens-results.json ]; then
-          python3 << 'PY'
-        import json
-
-        with open("/tmp/lens-results.json") as f:
-            d = json.load(f)
-
-        summary = d.get("summary", {})
-        metrics = d.get("metrics", {})
-        issues = d.get("issues", [])
-        ratings = d.get("quality_ratings", {})
-        dup = d.get("duplication", {})
-        cov = d.get("coverage", {})
-        total_files = summary.get("total_files", 0)
-        duration = d.get("scan", {}).get("duration_ms", 0)
-
-        print("| Metric | Value |")
-        print("|--------|-------|")
-        print(f"| Files | {total_files} |")
-        print(f"| Duration | {duration}ms |")
-        if metrics:
-            print(f"| LOC | {metrics.get('total_loc', '-')} |")
-            print(f"| Functions | {metrics.get('total_functions', '-')} |")
-            print(f"| Complexity | {metrics.get('total_cyclomatic_complexity', '-')} |")
-        if dup:
-            pct = dup.get("duplication_percent", 0)
-            emoji = "🟢" if pct < 3 else "🟡" if pct < 5 else "🔴"
-            print(f"| Duplication | {emoji} {pct:.2f}% |")
-        if cov:
-            pct = cov.get("coverage_percent", 0)
-            emoji = "🟢" if pct >= 80 else "🟡" if pct >= 50 else "🔴"
-            print(f"| Coverage | {emoji} {pct:.2f}% |")
-        print()
-
-        if ratings:
-            print("| Category | Rating |")
-            print("|----------|--------|")
-            for cat, r in ratings.items():
-                emoji = {"A": "🟢", "B": "🟡", "C": "🟠", "D": "🔴", "E": "🔴"}.get(r, "⚪")
-                print(f"| {cat.title()} | {emoji} {r} |")
-            print()
-
-        sev_counts = {}
-        for i in issues:
-            s = i.get("severity", "info")
-            sev_counts[s] = sev_counts.get(s, 0) + 1
-
-        print(f"### Issues: {len(issues)} total")
-        blocker = sev_counts.get("blocker", 0)
-        critical = sev_counts.get("critical", 0)
-        major = sev_counts.get("major", 0)
-        minor = sev_counts.get("minor", 0)
-        info = sev_counts.get("info", 0)
-
-        if blocker > 0: print(f"- 🔴 Blocker: **{blocker}**")
-        if critical > 0: print(f"- 🟠 Critical: **{critical}**")
-        if major > 0: print(f"- 🟡 Major: **{major}**")
-        if minor > 0: print(f"- 🔵 Minor: **{minor}**")
-        if info > 0: print(f"- ⚪ Info: {info}")
-        if not issues: print("✅ No issues found!")
-        print()
-
-        if issues:
-            print("<details><summary>📋 Top issues</summary>")
-            print()
-            print("| Severity | File | Line | Rule | Message |")
-            print("|----------|------|------|------|---------|")
-            for i in issues[:15]:
-                file = i.get("file", "?").split("/")[-1]
-                line = i.get("start_line", "?")
-                rule = i.get("rule_id", "?")
-                msg = i.get("message", "")[:60]
-                sev = i.get("severity", "info")
-                print(f"| {sev} | `{file}` | L{line} | `{rule}` | {msg} |")
-            print()
-            print("</details>")
-            print()
-        PY
-        fi
-
-        # Dependency results
-        if [ -f /tmp/lens-deps.json ]; then
-          python3 << 'PY2'
-        import json
-        try:
-            with open("/tmp/lens-deps.json") as f:
-                d = json.load(f)
-            vulns = d.get("vulnerabilities", [])
-            total = d.get("total_scanned", 0)
-            print(f"### 🛡️ Dependencies: {total} scanned, {len(vulns)} vulnerable")
-            if vulns:
-                print()
-                print("| Severity | Package | Version | ID |")
-                print("|----------|---------|---------|-----|")
-                for v in vulns[:10]:
-                    sev = v.get("severity", "info")
-                    pkg = v.get("package", "?")
-                    ver = v.get("version", "?")
-                    oid = v.get("osv_id", "?")
-                    url = v.get("url", "")
-                    print(f"| {sev} | `{pkg}` | {ver} | [{oid}]({url}) |")
-                print()
-            else:
-                print()
-                print("✅ No known vulnerabilities")
-                print()
-        except Exception:
-            pass
-        PY2
-        fi
-
-        VERSION=$(lens --version 2>/dev/null || echo "lens")
-        echo "" >> /tmp/lens-comment.md
-        echo "---" >> /tmp/lens-comment.md
-        echo "<sup>Generated by ${VERSION} • [Docs](https://docs.lenscan.dev) • [GitHub](https://github.com/fatmuh/lens)</sup>" >> /tmp/lens-comment.md
+        python3 ${{ github.action_path }}/../../scripts/build-pr-comment.py > /tmp/lens-comment.md
 
     - name: Post PR comment
       if: inputs.comment == 'true' && github.event.pull_request.number != ''
@@ -238,16 +126,16 @@ runs:
         script: |
           const fs = require('fs');
           const body = fs.readFileSync('/tmp/lens-comment.md', 'utf8');
-          
+
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: context.issue.number,
           });
-          
+
           const marker = '<!-- lens-ci-comment -->';
           const existing = comments.find(c => c.body.includes(marker));
-          
+
           if (existing) {
             await github.rest.issues.updateComment({
               owner: context.repo.owner,
@@ -265,13 +153,18 @@ runs:
           }
 
     - name: Upload SARIF
-      if: inputs.sarif == 'true' && always() && hashFiles('/tmp/lens-results.json') != ''
+      if: inputs.sarif == 'true' && always()
       shell: bash
       run: |
-        # Convert lens JSON to SARIF
-        if command -v lens &> /dev/null; then
-          lens scan ${{ inputs.path }} --format sarif --quiet > lens-results.sarif 2>/dev/null || true
-        fi
+        lens scan ${{ inputs.path }} --format sarif --quiet > lens-results.sarif 2>/dev/null || true
+
+    - name: Upload to Code Scanning
+      if: inputs.sarif == 'true' && always() && hashFiles('lens-results.sarif') != ''
+      uses: github/codeql-action/upload-sarif@v3
+      continue-on-error: true
+      with:
+        sarif_file: lens-results.sarif
+        category: lens
 
     - name: Quality gate
       if: inputs.gate == 'true' && steps.scan.outputs.exit != '0'
