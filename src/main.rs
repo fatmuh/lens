@@ -19,6 +19,7 @@ mod rules;
 mod scanner;
 mod setup;
 mod state;
+mod updater;
 mod util;
 
 use cli::{Cli, Command};
@@ -50,6 +51,7 @@ fn run(cli: Cli) -> Result<ExitCode> {
         Command::Init(args) => config::init(args),
         Command::Rules(args) => scanner::rules::list(args),
         Command::Ci(args) => scanner::run_ci(cli.config, args),
+        Command::Update(args) => updater::run_update(args),
         Command::Version => {
             println!("lens {}", env!("CARGO_PKG_VERSION"));
             println!("rust  {}", rustc_version_runtime());

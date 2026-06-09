@@ -68,6 +68,10 @@ pub enum Command {
     /// Run CI scan — SARIF output + quality gate + PR comment.
     #[command(visible_alias = "c")]
     Ci(CiArgs),
+
+    /// Self-update to the latest release from GitHub.
+    #[command(visible_alias = "u")]
+    Update(UpdateArgs),
 }
 
 #[derive(Debug, Args)]
@@ -341,6 +345,13 @@ pub struct TestArgs {
     /// Show diff preview without writing files.
     #[arg(long)]
     pub dry_run: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct UpdateArgs {
+    /// Only check for updates — don't download or install.
+    #[arg(long)]
+    pub check: bool,
 }
 
 #[derive(Debug, Args)]

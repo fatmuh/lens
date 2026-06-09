@@ -10,6 +10,7 @@
 //! them, with rules for the project language enabled automatically.
 
 pub mod builtin;
+pub mod custom;
 pub mod sonar_compat;
 
 #[cfg(test)]
@@ -144,6 +145,7 @@ impl RuleRegistry {
     pub fn with_config(cfg: &crate::config::RulesConfig) -> Self {
         let mut rules = builtin::all_rules_with(cfg);
         rules.extend(sonar_compat::all_sonar_stubs());
+        rules.extend(custom::CustomRule::all_from_config(&cfg.custom));
         Self { rules }
     }
 

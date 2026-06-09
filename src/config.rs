@@ -182,6 +182,51 @@ pub struct RulesConfig {
     pub no_magic_numbers_min: u32,
     /// Reserved for future `max-nested-depth` rule.
     pub max_nested_depth: u32,
+    /// User-defined custom rules (regex-based).
+    #[serde(default)]
+    pub custom: Vec<CustomRuleConfig>,
+}
+
+/// A user-defined rule loaded from `quality-gate.toml`.
+///
+/// Custom rules are regex-based: Lens scans each line of source files
+/// matching the configured `languages` and flags matches as issues.
+///
+/// # Example
+///
+/// ```toml
+/// [[rules.custom]]
+/// id = "no-hardcoded-api-keys"
+/// name = "No hardcoded API keys"
+/// description = "Detect hardcoded API keys in source code"
+/// severity = "blocker"
+/// languages = ["typescript", "javascript", "dart"]
+/// pattern = "(?i)(api[_-]?key|secret[_-]?key)\\s*[:=]\\s*['\\"][a-zA-Z0-9]{20,}['\\"]"
+/// message = "Hardcoded API key detected. Use environment variables instead."
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomRuleConfig {
+    /// Unique rule ID (kebab-case).
+    pub id: String,
+    /// Human-readable name.
+    pub name: String,
+    /// Longer description.
+    pub description: String,
+    /// Severity: `"blocker"`, `"critical"`, `"major"`, `"minor"`, or `"info"`.
+    #[serde(default = "default_custom_severity")]
+    pub severity: String,
+    /// Languages this rule applies to. Empty = all languages.
+    #[serde(default)]
+    pub languages: Vec<String>,
+    /// Regex pattern to search for in each line.
+    pub pattern: String,
+    /// Message shown for each match.
+    #[serde(default)]
+    pub message: String,
+}
+
+fn default_custom_severity() -> String {
+    "major".to_string()
 }
 
 impl Default for RulesConfig {
@@ -193,6 +238,7 @@ impl Default for RulesConfig {
             max_params: 5,
             no_magic_numbers_min: 3,
             max_nested_depth: 4,
+            custom: Vec::new(),
         }
     }
 }

@@ -10,7 +10,11 @@ use crate::rules::{Rule, RuleRegistry, Severity};
 
 /// Print a list of all available rules.
 pub fn list(args: RulesArgs) -> anyhow::Result<ExitCode> {
-    let registry = RuleRegistry::default_registry();
+    // Try to load config from current directory to pick up custom rules
+    let cfg = crate::config::Config::resolve_path(None, &std::path::PathBuf::from("."))
+        .and_then(|p| crate::config::Config::load(Some(&p)).ok())
+        .unwrap_or_default();
+    let registry = RuleRegistry::with_config(&cfg.rules);
     let rules = registry.rules();
     match args.format {
         Format::Json => print_json(rules),
