@@ -874,7 +874,7 @@ fn report_terminal(
     println!();
     println!(
         "{}",
-        "  ℹ Phase 1-6: Multi-language metrics, 105 built-in rules (TS/JS/Dart), security taint analysis, SonarQube-compatible duplication, and coverage parsing."
+        "  ℹ Phase 1-6: Multi-language metrics, 105 built-in rules (TS/JS/Dart), custom rules, security taint analysis, SonarQube-compatible duplication, and coverage parsing."
             .dimmed()
     );
     println!();

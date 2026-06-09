@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-06-09
+
+### Added
+
+- **Custom rules via config** — define project-specific regex-based rules in `quality-gate.toml`
+  - `[[rules.custom]]` with `id`, `name`, `pattern`, `severity`, `languages`, `message`
+  - Regex pattern matching per line, comment lines auto-skipped
+  - `$0` substitution in messages for matched text
+  - Configurable severity: blocker, critical, major, minor, info
+  - Language filtering: rules only apply to specified languages
+  - `lens rules` now loads custom rules from CWD config
+
+- **`lens update`** — self-update to the latest GitHub release
+  - Checks GitHub Releases API for new versions
+  - Downloads platform-matching binary (tar.gz / zip)
+  - Extracts and replaces running binary in-place
+  - Windows: renames old `.exe` → `.old` (can't overwrite running exe)
+  - `--check` flag: report available update without installing
+  - Auto-detects platform: linux/mac/windows, x86_64/aarch64
+
+- **5 new unit tests** (custom rule regex, version comparison, platform detection, asset matching, bytes formatting)
+
+### Fixed
+
+- `lens rules` now loads custom rules from `quality-gate.toml` in current directory
+- Custom rule `Box::leak` now happens once at construction instead of every trait method call
+
+### Dependencies
+
+- Added `flate2` 1.x, `tar` 0.4, `zip` 2.x
+- `reqwest` added `blocking` feature
+
 ## [0.4.0] — 2026-06-08
 
 ### Added
