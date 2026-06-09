@@ -96,9 +96,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lens-${{ matrix.target }}
-          path: |
-            dist/lens-${{ matrix.target }}.${{ matrix.archive }}
-            dist/checksums.txt
+          path: dist/lens-${{ matrix.target }}.${{ matrix.archive }}
           if-no-files-found: error
 
   release:
@@ -111,6 +109,15 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          merge-multiple: true
+
+      - name: Merge checksums
+        run: |
+          cd artifacts
+          # Remove per-target checksums, generate one combined
+          rm -f checksums.txt
+          sha256sum lens-*.tar.gz lens-*.zip > checksums.txt
+          cat checksums.txt
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
@@ -120,6 +127,6 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            artifacts/**/lens-*.tar.gz
-            artifacts/**/lens-*.zip
-            artifacts/**/checksums.txt
+            artifacts/lens-*.tar.gz
+            artifacts/lens-*.zip
+            artifacts/checksums.txt
