@@ -175,6 +175,20 @@ pub fn analyze(files: &[PathBuf], config: &AnalyzeConfig) -> ProjectAnalysis {
 fn analyze_file(path: &PathBuf, config: &AnalyzeConfig) -> FileAnalysis {
     let lang = language::detect(path);
 
+    // Skip files without a recognized language — no point analyzing
+    // .git/hooks/sample, lock files, binary files, etc.
+    if lang.is_none() {
+        return FileAnalysis {
+            path: path.clone(),
+            language: None,
+            analyzed: false,
+            metrics: None,
+            tokens: None,
+            nosonar_count: 0,
+            issues: Vec::new(),
+        };
+    }
+
     // Read the file. If we can't read it, return an empty analysis.
     let content = match std::fs::read_to_string(path) {
         Ok(c) => c,

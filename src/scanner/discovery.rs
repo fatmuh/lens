@@ -38,10 +38,23 @@ pub fn scan(root: &Path, cfg: &ScanConfig, no_gitignore: bool) -> Result<Vec<Pat
     let mut walker = WalkBuilder::new(root);
     walker
         .standard_filters(!no_gitignore)
-        .require_git(!no_gitignore)
+        .require_git(false) // Don't require git repo to work
         .git_exclude(!no_gitignore)
         .git_ignore(!no_gitignore)
-        .hidden(false); // include dotfiles, but .git is excluded via standard filters
+        .git_global(!no_gitignore)
+        .hidden(false) // include dotfiles like .env, .eslintrc
+        .add_custom_ignore_filename(".git")
+        .add_custom_ignore_filename(".git");
+
+    // Always exclude .git directory
+    // (standard_filters should do this, but hidden(false) may override)
+    let always_exclude = build_globset(&[
+        ".git/**".to_string(),
+        ".git".to_string(),
+        "**/.git/**".to_string(),
+    ])
+    .ok()
+    .flatten();
 
     // Inject custom ignore patterns via ignore's overlay mechanism.
     for _pat in &lensignore_patterns {
@@ -82,6 +95,11 @@ pub fn scan(root: &Path, cfg: &ScanConfig, no_gitignore: bool) -> Result<Vec<Pat
                 continue;
             }
         }
+        if let Some(set) = &always_exclude {
+            if set.is_match(&rel) {
+                continue;
+            }
+        }
         if let Some(set) = &lensignore_globs {
             if set.is_match(&rel) {
                 continue;
@@ -92,6 +110,20 @@ pub fn scan(root: &Path, cfg: &ScanConfig, no_gitignore: bool) -> Result<Vec<Pat
         if let Ok(meta) = entry.metadata() {
             if meta.len() > cfg.max_file_size_bytes {
                 tracing::debug!("skip (too large): {}", path.display());
+                continue;
+            }
+        }
+
+        // Only include files with recognized language extensions.
+        // Skip .sample, .lock, .bin, and other non-source files.
+        if crate::scanner::language::detect(&path).is_none() {
+            continue;
+        }
+
+        // Exclude test files if configured
+        if cfg.exclude_tests {
+            let rel_norm = rel.replace('\\', "/");
+            if crate::analyzer::is_test_or_generated_file(&rel_norm) {
                 continue;
             }
         }

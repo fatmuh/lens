@@ -27,3 +27,4 @@ lens-report/
 cobertura-coverage.xml
 jacoco.xml
 _sonarqube/
+.lens/

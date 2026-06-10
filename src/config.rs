@@ -46,6 +46,11 @@ pub struct ScanConfig {
     pub respect_lensignore: bool,
     /// Path to lens-specific ignore file (relative to root).
     pub ignore_file: String,
+    /// Exclude test files from analysis (files matching test patterns).
+    /// When true, test files are skipped entirely (no issues, no metrics).
+    /// When false (default), test files are scanned but excluded from
+    /// duplication and quality gate (matches SonarQube behavior).
+    pub exclude_tests: bool,
 }
 
 impl Default for ScanConfig {
@@ -59,6 +64,7 @@ impl Default for ScanConfig {
             respect_gitignore: true,
             respect_lensignore: true,
             ignore_file: LENSIGNORE_FILENAME.to_string(),
+            exclude_tests: false,
         }
     }
 }
@@ -417,6 +423,8 @@ impl Default for WatchConfig {
 
 impl Config {
     /// Load config from a path. Falls back to defaults if the file doesn't exist.
+    /// Also reads `sonar-project.properties` from the config's parent directory
+    /// and merges exclusions/test patterns into the scan config.
     pub fn load(path: Option<&Path>) -> Result<Self> {
         let Some(path) = path else {
             return Ok(Self::default());
@@ -428,8 +436,17 @@ impl Config {
 
         let text = std::fs::read_to_string(path)
             .with_context(|| format!("reading config: {}", path.display()))?;
-        let cfg: Self =
+        let mut cfg: Self =
             toml::from_str(&text).with_context(|| format!("parsing config: {}", path.display()))?;
+
+        // Try to read sonar-project.properties from the same directory
+        if let Some(parent) = path.parent() {
+            let sonar_path = parent.join("sonar-project.properties");
+            if sonar_path.exists() {
+                merge_sonar_properties(&mut cfg, &sonar_path);
+            }
+        }
+
         Ok(cfg)
     }
 
@@ -442,12 +459,158 @@ impl Config {
         if candidate.exists() {
             Some(candidate)
         } else {
+            // No quality-gate.toml — create a default config and merge
+            // sonar-project.properties if it exists
             None
+        }
+    }
+
+    /// Load config for a scan root, falling back to defaults if no
+    /// quality-gate.toml exists. Still reads sonar-project.properties.
+    pub fn load_for_root(explicit: Option<&Path>, scan_root: &Path) -> Result<Self> {
+        if let Some(p) = explicit {
+            return Self::load(Some(p));
+        }
+
+        let candidate = scan_root.join(CONFIG_FILENAME);
+        if candidate.exists() {
+            Self::load(Some(&candidate))
+        } else {
+            // No quality-gate.toml — use defaults but still read sonar
+            let mut cfg = Self::default();
+            let sonar_path = scan_root.join("sonar-project.properties");
+            if sonar_path.exists() {
+                merge_sonar_properties(&mut cfg, &sonar_path);
+            }
+            Ok(cfg)
         }
     }
 }
 
-/// `lens init` — write a starter `quality-gate.toml` to the target directory.
+/// Parse `sonar-project.properties` and merge exclusions, sources, and test
+/// patterns into the Lens config. This allows Lens to work out-of-the-box
+/// with projects that already have SonarQube configuration.
+fn merge_sonar_properties(cfg: &mut Config, path: &Path) {
+    let Ok(text) = std::fs::read_to_string(path) else {
+        return;
+    };
+
+    tracing::info!("reading sonar-project.properties: {}", path.display());
+
+    for line in text.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+
+        // Parse key=value
+        let Some((key, value)) = line.split_once('=') else {
+            continue;
+        };
+        let key = key.trim();
+        let value = value.trim();
+
+        match key {
+            // sonar.exclusions → scan.exclude
+            "sonar.exclusions" => {
+                let patterns = parse_sonar_globs(value);
+                if !patterns.is_empty() {
+                    tracing::info!("  sonar.exclusions → {} pattern(s)", patterns.len());
+                    cfg.scan.exclude.extend(patterns);
+                }
+            }
+
+            // sonar.sources → scan.include
+            "sonar.sources" => {
+                let dirs = parse_sonar_globs(value);
+                if !dirs.is_empty() && cfg.scan.include.is_empty() {
+                    // Convert source dirs to glob patterns
+                    let globs: Vec<String> = dirs
+                        .iter()
+                        .flat_map(|d| {
+                            // sonar.sources=src → include src/**
+                            if d.contains('*') {
+                                vec![d.clone()]
+                            } else {
+                                vec![format!("{}/**", d.trim_end_matches('/'))]
+                            }
+                        })
+                        .collect();
+                    tracing::info!("  sonar.sources → {} pattern(s)", globs.len());
+                    cfg.scan.include = globs;
+                }
+            }
+
+            // sonar.tests → mark test directories
+            "sonar.tests" => {
+                let dirs = parse_sonar_globs(value);
+                for d in &dirs {
+                    let pattern = if d.contains('*') {
+                        d.clone()
+                    } else {
+                        format!("{}/**", d.trim_end_matches('/'))
+                    };
+                    // Add to test_patterns for quality gate exclusion
+                    cfg.significant_code.test_patterns.push(pattern);
+                }
+                if !dirs.is_empty() {
+                    tracing::info!("  sonar.tests → {} test dir(s)", dirs.len());
+                }
+            }
+
+            // sonar.test.inclusions → test file patterns
+            "sonar.test.inclusions" => {
+                let patterns = parse_sonar_globs(value);
+                for p in &patterns {
+                    cfg.significant_code.test_patterns.push(p.clone());
+                    // Also exclude test files from duplication
+                }
+                if !patterns.is_empty() {
+                    tracing::info!(
+                        "  sonar.test.inclusions → {} test pattern(s)",
+                        patterns.len()
+                    );
+                }
+            }
+
+            // sonar.test.exclusions → exclude test files from analysis
+            "sonar.test.exclusions" => {
+                let patterns = parse_sonar_globs(value);
+                if !patterns.is_empty() {
+                    cfg.scan.exclude.extend(patterns);
+                }
+            }
+
+            // sonar.coverage.reportPaths → coverage report paths
+            "sonar.coverage.reportPaths" | "sonar.javascript.lcov.reportPaths" => {
+                let paths = parse_sonar_globs(value);
+                if !paths.is_empty()
+                    && cfg.coverage.report_paths.len() == 1
+                    && cfg.coverage.report_paths[0] == "coverage/lcov.info"
+                {
+                    cfg.coverage.report_paths = paths;
+                    tracing::info!(
+                        "  sonar coverage → {} path(s)",
+                        cfg.coverage.report_paths.len()
+                    );
+                }
+            }
+
+            _ => {}
+        }
+    }
+}
+
+/// Parse a comma-separated list of SonarQube glob patterns.
+/// Handles patterns like `**/*.spec.ts,**/node_modules/**`
+fn parse_sonar_globs(value: &str) -> Vec<String> {
+    value
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect()
+}
 pub fn init(args: InitArgs) -> Result<std::process::ExitCode> {
     let target = args.path.join(CONFIG_FILENAME);
     if target.exists() && !args.force {

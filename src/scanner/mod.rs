@@ -66,9 +66,16 @@ pub fn run(config_arg: Option<PathBuf>, args: ScanArgs) -> Result<ExitCode> {
         .path
         .canonicalize()
         .unwrap_or_else(|_| args.path.clone());
-    let config_path = Config::resolve_path(config_arg.as_deref(), &scan_root);
-    let config = Config::load(config_path.as_deref())
-        .with_context(|| format!("loading config from {:?}", config_path))?;
+    let config = Config::load_for_root(config_arg.as_deref(), &scan_root)
+        .with_context(|| format!("loading config for {:?}", scan_root))?;
+    let config_path = config_arg.as_deref().map(|p| p.to_path_buf()).or_else(|| {
+        let candidate = scan_root.join("quality-gate.toml");
+        if candidate.exists() {
+            Some(candidate)
+        } else {
+            None
+        }
+    });
 
     let display_root = util::path::normalize(&scan_root);
     let display_config = config_path.as_ref().map(|p| util::path::normalize(p));
@@ -686,9 +693,8 @@ pub fn run_ci(config_arg: Option<PathBuf>, args: crate::cli::CiArgs) -> Result<E
         .path
         .canonicalize()
         .unwrap_or_else(|_| args.path.clone());
-    let config_path = Config::resolve_path(config_arg.as_deref(), &scan_root);
-    let config = Config::load(config_path.as_deref())
-        .with_context(|| format!("loading config from {:?}", config_path))?;
+    let config = Config::load_for_root(config_arg.as_deref(), &scan_root)
+        .with_context(|| format!("loading config for {:?}", scan_root))?;
 
     let display_root = util::path::normalize(&scan_root);
     info!("CI scan root: {}", display_root.display());
