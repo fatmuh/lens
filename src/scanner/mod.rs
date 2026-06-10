@@ -412,7 +412,9 @@ fn run_analyzer(files: &[PathBuf], cfg: &AnalyzeConfig, args: &ScanArgs) -> Proj
     let skipped = cached.len();
     let total = files.len();
 
+    let json_output = matches!(args.format, Format::Json) || matches!(args.format, Format::Sarif);
     let show_progress = !args.quiet
+        && !json_output
         && matches!(args.format, Format::Terminal)
         && changed.len() > 100
         && std::io::stderr().is_terminal();
@@ -475,7 +477,7 @@ fn run_analyzer(files: &[PathBuf], cfg: &AnalyzeConfig, args: &ScanArgs) -> Proj
         );
     }
 
-    if skipped > 0 && !args.quiet {
+    if skipped > 0 && !args.quiet && !json_output {
         println!(
             "  {} scanned {} of {} files ({} skipped, hash match)",
             "⚡".yellow(),

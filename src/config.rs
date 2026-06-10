@@ -524,11 +524,13 @@ fn merge_sonar_properties(cfg: &mut Config, path: &Path) {
             "sonar.sources" => {
                 let dirs = parse_sonar_globs(value);
                 if !dirs.is_empty() && cfg.scan.include.is_empty() {
-                    // Convert source dirs to glob patterns
                     let globs: Vec<String> = dirs
                         .iter()
                         .flat_map(|d| {
-                            // sonar.sources=src → include src/**
+                            // sonar.sources=. → scan everything
+                            if d == "." || d == "./" {
+                                return vec![];
+                            }
                             if d.contains('*') {
                                 vec![d.clone()]
                             } else {
@@ -536,8 +538,10 @@ fn merge_sonar_properties(cfg: &mut Config, path: &Path) {
                             }
                         })
                         .collect();
-                    tracing::info!("  sonar.sources → {} pattern(s)", globs.len());
-                    cfg.scan.include = globs;
+                    if !globs.is_empty() {
+                        tracing::info!("  sonar.sources → {} pattern(s)", globs.len());
+                        cfg.scan.include = globs;
+                    }
                 }
             }
 
