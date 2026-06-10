@@ -394,10 +394,29 @@ lens:
 | **AI auto-fix** (BYOK) | ✅ |
 | **Self-update** (`lens update`) | ✅ |
 | **CI command** (`lens ci`) | ✅ |
-| GitHub App (PR bot) | 🔜 |
-| VS Code extension | 🔜 |
+| GitHub App (PR bot) | ✅ |
+| VS Code extension | ✅ |
 | Python support | ✅ |
 | Java/Kotlin support | Planned |
+
+---
+
+## 🧩 VS Code extension
+
+Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=fatmuh.lens):
+
+```
+code --install-extension fatmuh.lens
+```
+
+Features:
+- Real-time scanning on save
+- Issues shown as squiggly lines in editor
+- Status bar with issue count
+- AI fix integration
+- Configurable severity mapping
+
+Source: [github.com/fatmuh/lens-vscode](https://github.com/fatmuh/lens-vscode)
 
 ---
 
