@@ -62,10 +62,20 @@ pub fn run(config_arg: Option<PathBuf>, args: ScanArgs) -> Result<ExitCode> {
         std::env::set_var("NO_COLOR", "1");
     }
 
-    let scan_root = args
+    let mut scan_root = args
         .path
         .canonicalize()
         .unwrap_or_else(|_| args.path.clone());
+
+    // Allow scanning a single file — use parent dir, filter later
+    let single_file = if scan_root.is_file() {
+        let f = scan_root.clone();
+        scan_root = scan_root.parent().unwrap_or(&scan_root).to_path_buf();
+        Some(f)
+    } else {
+        None
+    };
+
     let config = Config::load_for_root(config_arg.as_deref(), &scan_root)
         .with_context(|| format!("loading config for {:?}", scan_root))?;
     let config_path = config_arg.as_deref().map(|p| p.to_path_buf()).or_else(|| {
@@ -98,6 +108,13 @@ pub fn run(config_arg: Option<PathBuf>, args: ScanArgs) -> Result<ExitCode> {
 
     let files = discovery::scan(&scan_root, &config.scan, args.no_gitignore)
         .context("discovering files")?;
+
+    // Single file mode — only scan the requested file
+    let files: Vec<PathBuf> = if let Some(ref sf) = single_file {
+        files.into_iter().filter(|f| f == sf).collect()
+    } else {
+        files
+    };
 
     info!("discovered {} file(s)", files.len());
 
